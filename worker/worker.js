@@ -1,7 +1,7 @@
 // Máy chủ trung gian cho trang GLM: giữ API key Z.ai để mọi người dùng chung mà không thấy key.
 //
 // An toàn:
-// - Key nằm trong biến bí mật ZAI_API_KEY, NVIDIA_API_KEY, DEEPSEEK_API_KEY (nếu có) của Cloudflare, không có trong code.
+// - Key nằm trong biến bí mật ZAI_API_KEY, NVIDIA_API_KEY, GROQ_API_KEY (nếu có) của Cloudflare, không có trong code.
 // - Chỉ cho dùng mô hình miễn phí / có key riêng, nên kể cả bị lạm dụng cũng không mất tiền ngoài hạn mức key.
 // - Chỉ trình duyệt mở từ các trang trong ALLOWED_ORIGINS mới gọi được (chặn trang web khác dùng ké).
 // - Giới hạn số lượt hỏi mỗi phút cho mỗi địa chỉ IP.
@@ -15,10 +15,10 @@
 const UPSTREAM = "https://api.z.ai/api/paas/v4/chat/completions";
 const FREE_MODELS = ["glm-4.7-flash", "glm-4.5-flash", "glm-4.6v-flash"];
 const VISION_MODEL = "glm-4.6v-flash"; // mô hình miễn phí duy nhất của Z.ai đọc được ảnh
-// DeepSeek gọi thẳng API chính thức (ổn định hơn NVIDIA NIM). Cần biến bí mật DEEPSEEK_API_KEY.
-const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
-const DEEPSEEK_ID = "deepseek-v4.1-flash"; // id nội bộ trên trang Astra
-const DEEPSEEK_MODEL = "deepseek-flash"; // id thật trên API DeepSeek (V4.1 Flash, có vision)
+// Titan Pro XS = Qwen 3.8 27B qua Groq (free, rất nhanh, có vision). Cần biến bí mật GROQ_API_KEY.
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_ID = "qwen-3.8-27b"; // id nội bộ trên trang Astra (= Titan Pro XS)
+const GROQ_MODEL = "qwen/qwen3.8-27b"; // id thật trên Groq
 // Các mô hình miễn phí trên NVIDIA (build.nvidia.com, khoảng 40 lượt mỗi phút cho cả tài khoản), cần biến bí mật NVIDIA_API_KEY.
 // Bản miễn phí của NVIDIA hay quá tải (xếp hàng nhiều phút, hoặc trả 200 mà không gửi gì): chỉ chờ chữ đầu tiên tối đa
 // NVIDIA_WAIT, không được thì dùng GLM của Z.ai và tạm bỏ qua mô hình đó một lúc để các câu sau khỏi phải chờ lại.
@@ -149,19 +149,19 @@ export default {
       effort: body.effort === "max" ? "max" : "high", // chế độ Nghĩ kỹ: GLM-5.3 suy nghĩ ở mức tối đa
     };
 
-    // DeepSeek gọi thẳng API chính thức (ổn định hơn NVIDIA). Titan Pro XS = deepseek-v4.1-flash.
-    // Các mô hình NVIDIA còn lại: thử NVIDIA trước. Câu hỏi có ảnh mà mô hình không đọc được ảnh thì dùng GLM-5.3 Flash.
+    // Titan Pro XS = Qwen 3.8 27B (Groq free, rất nhanh). Các mô hình NVIDIA còn lại thử NVIDIA trước.
+    // Câu hỏi có ảnh mà mô hình không đọc được ảnh thì dùng GLM-5.3 Flash.
     // Không dùng được thì trả lời bằng GLM của Z.ai và ghi lý do vào X-GLM-Note để trang hiện cho người dùng.
     let upstream, used, note = "", stream = null;
-    if (body.model === DEEPSEEK_ID) {
-      const title = "DeepSeek V4.1 Flash", down = nvidiaDown.get(DEEPSEEK_ID);
-      if (!env.DEEPSEEK_API_KEY) note = `${title} chưa được bật trên máy chủ (thiếu DEEPSEEK_API_KEY)`;
+    if (body.model === GROQ_ID) {
+      const title = "Qwen 3.8 27B", down = nvidiaDown.get(GROQ_ID);
+      if (!env.GROQ_API_KEY) note = `${title} chưa được bật trên máy chủ (thiếu GROQ_API_KEY)`;
       else if (!clean.stream) note = `${title} chỉ dùng khi trả lời dạng luồng`;
       else if (down && down.until > Date.now()) note = `${title} ${down.note}; máy chủ sẽ thử lại sau ${Math.ceil((down.until - Date.now()) / 60_000)} phút`;
       else {
-        const r = await callDeepseek(clean, env, NVIDIA_WAIT);
-        if (r.body) { nvidiaDown.delete(DEEPSEEK_ID); used = DEEPSEEK_ID; stream = r.body; }
-        else { nvidiaDown.set(DEEPSEEK_ID, { until: Date.now() + r.cool, note: r.note }); note = `${title} ${r.note}`; }
+        const r = await callGroq(clean, env, NVIDIA_WAIT);
+        if (r.body) { nvidiaDown.delete(GROQ_ID); used = GROQ_ID; stream = r.body; }
+        else { nvidiaDown.set(GROQ_ID, { until: Date.now() + r.cool, note: r.note }); note = `${title} ${r.note}`; }
       }
     }
     let nv = !used && NVIDIA_MODELS[body.model] ? body.model : null;
@@ -274,37 +274,31 @@ async function callNvidia(name, clean, env, wait) {
   }
 }
 
-// Gọi DeepSeek API chính thức (deepseek-flash = V4.1 Flash). Thành công: { body }; thất bại: { note, cool }.
-async function callDeepseek(clean, env, wait) {
+// Gọi Qwen 3.8 27B trên Groq (Titan Pro XS). Thành công: { body }; thất bại: { note, cool }.
+async function callGroq(clean, env, wait) {
   const { thinking, effort, ...rest } = clean;
-  const on = thinking.type !== "disabled";
-  // DeepSeek: thinking.type + reasoning_effort (low/high/max). Ảnh gửi dạng data:image/...;base64 như OpenAI.
-  const think = {
-    thinking: { type: on ? "enabled" : "disabled" },
-    ...(on ? { reasoning_effort: effort === "max" ? "max" : "high" } : {}),
-  };
+  // Groq/Qwen: OpenAI-compatible. Ảnh data URL base64. Context ~131K trên Groq.
   const timer = new AbortController(), t = setTimeout(() => timer.abort(), wait);
   const timeout = new Promise((_, no) => timer.signal.addEventListener("abort", () => no(new Error("timeout"))));
   timeout.catch(() => {});
   let reader;
   try {
-    const send = (max_tokens) => Promise.race([fetch(DEEPSEEK_URL, {
+    const send = (max_tokens) => Promise.race([fetch(GROQ_URL, {
       method: "POST",
       signal: timer.signal,
-      headers: { "Content-Type": "application/json", Accept: "text/event-stream", Authorization: `Bearer ${env.DEEPSEEK_API_KEY}` },
-      body: JSON.stringify({ ...rest, stream: true, model: DEEPSEEK_MODEL, ...think, max_tokens }),
+      headers: { "Content-Type": "application/json", Accept: "text/event-stream", Authorization: `Bearer ${env.GROQ_API_KEY}` },
+      body: JSON.stringify({ ...rest, stream: true, model: GROQ_MODEL, max_tokens: Math.min(max_tokens, 16384) }),
     }), timeout]);
-    let res = await send(Math.min(rest.max_tokens, 65536));
+    let res = await send(rest.max_tokens);
     if (res.status === 400) {
       const text = await res.text().catch(() => "");
-      res = /max_tokens|context|too large|maximum/i.test(text) ? await send(16384) : new Response(text, { status: 400 });
+      res = /max_tokens|context|too large|maximum/i.test(text) ? await send(8192) : new Response(text, { status: 400 });
     }
     if (!res.ok) {
       const detail = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 160);
       clearTimeout(t);
-      if (res.status === 401 || res.status === 403) return { note: `bị từ chối (${res.status}): kiểm tra lại DEEPSEEK_API_KEY`, cool: 600_000 };
-      if (res.status === 429) return { note: "hết lượt hoặc đang quá tải (429)", cool: 60_000 };
-      if (res.status === 402) return { note: "hết credit / cần nạp thêm (402)", cool: 300_000 };
+      if (res.status === 401 || res.status === 403) return { note: `bị từ chối (${res.status}): kiểm tra lại GROQ_API_KEY`, cool: 600_000 };
+      if (res.status === 429) return { note: "hết lượt free hoặc đang quá tải (429)", cool: 60_000 };
       return { note: `báo lỗi ${res.status}: ${detail}`, cool: 300_000 };
     }
     reader = res.body.getReader();
@@ -323,7 +317,7 @@ async function callDeepseek(clean, env, wait) {
         let stall;
         const r = await Promise.race([reader.read(), new Promise((ok) => { stall = setTimeout(() => ok(null), STALL); })]);
         clearTimeout(stall);
-        if (!r) { reader.cancel().catch(() => {}); c.error(new Error("DeepSeek ngừng gửi dữ liệu")); }
+        if (!r) { reader.cancel().catch(() => {}); c.error(new Error("Groq ngừng gửi dữ liệu")); }
         else if (r.done) c.close();
         else c.enqueue(r.value);
       },
@@ -339,25 +333,25 @@ async function callDeepseek(clean, env, wait) {
   }
 }
 
-// Kiểm tra nhanh từng mô hình mạnh (lưu kết quả 2 phút). DeepSeek kiểm tra riêng; NVIDIA như cũ.
+// Kiểm tra nhanh từng mô hình mạnh (lưu kết quả 2 phút). Groq (Titan Pro XS) kiểm tra riêng; NVIDIA như cũ.
 // Mô hình đang bị tạm bỏ qua thì báo luôn, không gọi lại. all = kiểm tra cả các mô hình thử (trial).
 async function nvidiaStatus(env, all) {
   const cache = statusCache?.[all ? "all" : "menu"];
   if (cache && Date.now() - cache.at < 120_000) return cache.data;
   const probe = { messages: [{ role: "user", content: "Hi" }], stream: true, temperature: 0.6, top_p: 0.95, max_tokens: 16, thinking: { type: "enabled" }, effort: "high" };
   const models = {};
-  // DeepSeek (API riêng)
-  if (env.DEEPSEEK_API_KEY) {
-    const down = nvidiaDown.get(DEEPSEEK_ID);
-    if (down && down.until > Date.now()) models[DEEPSEEK_ID] = { ok: false, note: down.note };
+  // Titan Pro XS = Qwen 3.8 27B trên Groq
+  if (env.GROQ_API_KEY) {
+    const down = nvidiaDown.get(GROQ_ID);
+    if (down && down.until > Date.now()) models[GROQ_ID] = { ok: false, note: down.note };
     else {
       const start = Date.now();
-      const r = await callDeepseek(probe, env, 20_000);
-      if (r.body) { r.body.cancel().catch(() => {}); nvidiaDown.delete(DEEPSEEK_ID); models[DEEPSEEK_ID] = { ok: true, ms: Date.now() - start }; }
-      else { nvidiaDown.set(DEEPSEEK_ID, { until: Date.now() + r.cool, note: r.note }); models[DEEPSEEK_ID] = { ok: false, note: r.note }; }
+      const r = await callGroq(probe, env, 20_000);
+      if (r.body) { r.body.cancel().catch(() => {}); nvidiaDown.delete(GROQ_ID); models[GROQ_ID] = { ok: true, ms: Date.now() - start }; }
+      else { nvidiaDown.set(GROQ_ID, { until: Date.now() + r.cool, note: r.note }); models[GROQ_ID] = { ok: false, note: r.note }; }
     }
   } else {
-    models[DEEPSEEK_ID] = { ok: false, note: "thiếu DEEPSEEK_API_KEY" };
+    models[GROQ_ID] = { ok: false, note: "thiếu GROQ_API_KEY" };
   }
   // NVIDIA
   if (env.NVIDIA_API_KEY) {
@@ -370,7 +364,7 @@ async function nvidiaStatus(env, all) {
       else { nvidiaDown.set(name, { until: Date.now() + r.cool, note: r.note, gone: r.gone }); models[name] = { ok: false, note: r.note, gone: r.gone }; }
     }));
   }
-  const enabled = !!(env.DEEPSEEK_API_KEY || env.NVIDIA_API_KEY);
+  const enabled = !!(env.GROQ_API_KEY || env.NVIDIA_API_KEY);
   statusCache = { ...statusCache, [all ? "all" : "menu"]: { at: Date.now(), data: { enabled, models } } };
   return statusCache[all ? "all" : "menu"].data;
 }
