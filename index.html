@@ -1077,20 +1077,20 @@
       name: "Astra",
       url: SHARED_URL,
       // Phải khớp FREE_MODELS trong worker/worker.js.
-      // Titan Pro XS = DeepSeek V4.1 Flash (API DeepSeek trực tiếp, có vision). Các mô hình còn lại chạy NVIDIA; máy chủ tự dùng GLM của Z.ai khi chúng bận.
-      models: ["deepseek-v4.1-flash", "glm-5.3-flash", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash",
+      // Titan Pro XS = Qwen 3.8 27B (Groq free, rất nhanh, có vision). Các mô hình còn lại chạy NVIDIA; máy chủ tự dùng GLM của Z.ai khi chúng bận.
+      models: ["qwen-3.8-27b", "glm-5.3-flash", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash",
         "glm-4.7-flash", "glm-4.5-flash", "glm-4.6v-flash"],
-      // Nhóm "Mạnh nhất" (deepseek dùng DEEPSEEK_API_KEY; còn lại NVIDIA_API_KEY). Phải khớp worker.js.
-      nvidia: ["deepseek-v4.1-flash", "glm-5.3-flash", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash"],
+      // Nhóm "Mạnh nhất" (qwen-3.8-27b dùng GROQ_API_KEY; còn lại NVIDIA_API_KEY). Phải khớp worker.js.
+      nvidia: ["qwen-3.8-27b", "glm-5.3-flash", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash"],
       // Mô hình đọc được ảnh: câu hỏi có ảnh gửi tới mô hình đang chọn nếu nó đọc được ảnh, không thì tới visionNvidia,
       // máy chủ lỗi thì tới vision (GLM-4.6V Flash của Z.ai).
       visionNvidia: "nemotron-3.5-super-vl",
       // Mô hình NVIDIA tự đọc được ảnh: đang chọn mô hình này thì câu hỏi có ảnh gửi thẳng tới nó.
-      visionModels: ["deepseek-v4.1-flash", "glm-5.3-flash", "nemotron-3.5-super-vl"],
+      visionModels: ["qwen-3.8-27b", "glm-5.3-flash", "nemotron-3.5-super-vl"],
       vision: "glm-4.6v-flash",
       // Tên riêng của Astra cho từng mô hình (theo họ mô hình, giữ số phiên bản), vì cách suy nghĩ, kỹ năng và quy trình kiểm tra là của Astra.
       titles: {
-        "deepseek-v4.1-flash": ["Titan Pro XS", "Mạnh hơn Titan 4 Mega: suy luận sâu, toán, code, đọc ảnh, cực nhanh"],
+        "qwen-3.8-27b": ["Titan Pro XS", "Code & agent nhanh (Qwen 3.8 27B trên Groq): lập trình, suy luận, đọc ảnh, trả lời cực nhanh"],
         "glm-5.3-flash": ["Titan 4 Mega", "Rất mạnh: suy luận, toán, code và đọc ảnh, trả lời nhanh"],
         "nemotron-3-ultra": ["Titan 3 Ultra", "Rất thông minh: suy luận, toán và code rất tốt"],
         "nemotron-3.5-super-vl": ["Titan 3.5 Vision", "Đọc ảnh giỏi, suy nghĩ kỹ, bắt được bẫy trong đề"],
@@ -1105,7 +1105,7 @@
       },
       // Biểu tượng và màu của từng mô hình trong menu.
       looks: {
-        "deepseek-v4.1-flash": ["#0d9488", "#14b8a6", "M12 2 4 7v10l8 5 8-5V7l-8-5Zm0 2.2 5.5 3.4v6.8L12 17.8l-5.5-3.4V7.6L12 4.2Zm0 4.3a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"],
+        "qwen-3.8-27b": ["#0d9488", "#14b8a6", "M12 2 4 7v10l8 5 8-5V7l-8-5Zm0 2.2 5.5 3.4v6.8L12 17.8l-5.5-3.4V7.6L12 4.2Zm0 4.3a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"],
         "glm-5.3-flash": ["#6d28d9", "#2563eb", "M5.2 17.5 4 10.3l4.6 3.1L12 7.6l3.4 5.8 4.6-3.1-1.2 7.2ZM5.2 20.5h13.6M4.9 8.4a1.3 1.3 0 1 1-2.6 0 1.3 1.3 0 0 1 2.6 0ZM13.3 4.9a1.3 1.3 0 1 1-2.6 0 1.3 1.3 0 0 1 2.6 0ZM21.7 8.4a1.3 1.3 0 1 1-2.6 0 1.3 1.3 0 0 1 2.6 0ZM12 12.6l1.5 1.7-1.5 1.7-1.5-1.7Z"],
         "nemotron-3-ultra": ["#6d28d9", "#2563eb", "M6 3h12l4 6-10 12L2 9l4-6ZM2 9h20M12 21 8 9l2-6M12 21l4-12-2-6"],
         "nemotron-3.5-super-vl": ["#0891b2", "#22c55e", "M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12ZM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"],
@@ -1140,7 +1140,7 @@
 
   const modelTitle = (id, m) => PROVIDERS[id].titles[m]?.[0] || m;
   // Ghi chú của máy chủ dùng tên gốc của mô hình: đổi sang tên của Astra.
-  const ORIGINAL_NAMES = { "DeepSeek V4.1 Flash": "deepseek-v4.1-flash", "GLM-5.3 Flash": "glm-5.3-flash", "Nemotron 3 Ultra": "nemotron-3-ultra", "Nemotron 3.5 Super VL": "nemotron-3.5-super-vl", "Nemotron 3.5 Lightning": "nemotron-3.5-lightning",
+  const ORIGINAL_NAMES = { "Qwen 3.8 27B": "qwen-3.8-27b", "GLM-5.3 Flash": "glm-5.3-flash", "Nemotron 3 Ultra": "nemotron-3-ultra", "Nemotron 3.5 Super VL": "nemotron-3.5-super-vl", "Nemotron 3.5 Lightning": "nemotron-3.5-lightning",
     "Mistral Large 4": "mistral-large-4", "Laguna XS": "laguna-xs", "Step 5": "step-5", "MiniMax M3.1 Flash": "minimax-m3.1-flash", "GLM-4.7 Flash": "glm-4.7-flash", "GLM-4.5 Flash": "glm-4.5-flash", "GLM-4.6V Flash": "glm-4.6v-flash" };
   const brandNote = (t) => Object.entries(ORIGINAL_NAMES).reduce((a, [o, id]) => a.split(o).join(modelTitle("shared", id)), String(t || ""))
     .replace(/GLM của Z\.ai|Z\.ai|NVIDIA_API_KEY|NVIDIA/g, (w) => (w === "NVIDIA_API_KEY" ? "khoá máy chủ" : "máy chủ dự phòng"));
@@ -2049,12 +2049,12 @@
     "(4) biểu đồ, bảng: đọc tiêu đề, trục, đơn vị, chú thích rồi mới đọc số liệu; (5) đề toán, code trong ảnh: chép lại đề rồi giải như bình thường, có kiểm chứng; " +
     "(6) chỗ mờ, bị che, không chắc thì nói rõ là không đọc được hoặc đang đoán, không bịa chi tiết không có trong ảnh.";
   const MODEL_PROFILES = {
-    "deepseek-v4.1-flash":
-      "Sở trường của bạn (Titan Pro XS, mô hình mạnh nhất của Astra): suy luận sâu, toán, lập trình, đọc ảnh, tốc độ cao. Hãy phát huy:\n" +
+    "qwen-3.8-27b":
+      "Sở trường của bạn (Titan Pro XS — Qwen 3.8 27B trên Groq): lập trình/agent nhanh, suy luận, toán, đọc ảnh, tốc độ rất cao. Hãy phát huy:\n" +
       "- Câu khó: suy nghĩ đủ sâu theo khung ở trên, tự kiểm chứng bằng cách độc lập; câu dễ thì trả lời ngay, không nghĩ dài thừa.\n" +
       "- Toán, chứng minh, code khó: lập luận chặt, nêu điều kiện áp dụng, chọn thuật toán tối ưu, chạy thử trước khi đưa.\n" +
       "- Ảnh: " + VISION_PROMPT + "\n" +
-      "- Bạn là tier cao nhất: luôn thử phản bác đáp án của chính mình trước khi kết luận; ưu tiên đáp án đúng hơn là trả lời dài.",
+      "- Ưu tiên đáp án đúng và gọn; code thì chạy thử logic trước khi đưa.",
     "glm-5.3-flash":
       "Sở trường của bạn (Titan 4 Mega, một trong các mô hình mạnh nhất của Astra): suy luận sâu mà vẫn nhanh, toán, lập trình, đọc ảnh. Hãy phát huy:\n" +
       "- Câu khó: suy nghĩ đủ sâu theo khung ở trên, tự kiểm chứng bằng cách độc lập; câu dễ thì trả lời ngay, không nghĩ dài thừa.\n" +
@@ -2109,7 +2109,7 @@
     "glm-4.6v-flash":
       "Sở trường của bạn (Nova 4.6 Vision): đọc ảnh chụp, tài liệu, biểu đồ.\n" + VISION_PROMPT,
   };
-  // Tay nghề riêng của dòng Titan (mô hình mạnh nhất): làm slide và làm web ở mức chuyên gia. Chỉ thêm khi câu hỏi đang dùng kỹ năng tương ứng.
+  // Tay nghề riêng của dòng Titan: làm slide và làm web ở mức chuyên gia. Chỉ thêm khi câu hỏi đang dùng kỹ năng tương ứng.
   const TITAN_SLIDES =
     "Tay nghề làm slide mức chuyên gia của Astra. Quy trình bắt buộc:\n" +
     "1) Xác định khán giả, mục tiêu (sau bài họ cần hiểu, nhớ hay làm gì) và thời lượng; số slide khoảng 1 slide cho mỗi 1–2 phút nói.\n" +
@@ -2221,7 +2221,7 @@
     "- Tiện ích: chia sẻ (Web Share API, sao chép liên kết), in đẹp (@media print), tải về (CSV, JSON, ảnh), đọc to bằng speechSynthesis giọng vi-VN khi hợp, " +
     "toàn màn hình, PWA cài được và chạy ngoại tuyến.\n" +
     "- Ít mà xuất sắc hơn nhiều mà dở: tính năng nào cũng phải hoàn chỉnh, đẹp và không lỗi.";
-  const TITANS = ["deepseek-v4.1-flash", "glm-5.3-flash", "nemotron-3-ultra", "nemotron-3.5-super-vl", "nemotron-3.5-lightning"];
+  const TITANS = ["qwen-3.8-27b", "glm-5.3-flash", "nemotron-3-ultra", "nemotron-3.5-super-vl", "nemotron-3.5-lightning"];
   // Gắn điểm mạnh của đúng mô hình sắp nhận câu hỏi vào lời nhắc hệ thống (bản sao, không đổi lịch sử).
   function withProfile(messages, model) {
     if (messages[0]?.role !== "system" || typeof messages[0].content !== "string") return messages;
