@@ -193,3 +193,10 @@ MODEL_QUANT=Q4_K_M ./chat.sh
 - Bản GGUF: [bartowski/THUDM_GLM-Z1-9B-0414-GGUF](https://huggingface.co/bartowski/THUDM_GLM-Z1-9B-0414-GGUF)
 - Bộ chạy: [llama.cpp](https://github.com/ggml-org/llama.cpp)
 - Các script trong repo này: giấy phép MIT (xem [LICENSE](LICENSE))
+
+
+## Titan Pro XS (15/11/2026)
+
+- **Titan Pro XS** = DeepSeek V4.1 Flash gọi thẳng API DeepSeek (ổn định hơn NVIDIA NIM), có vision.
+- Cần đặt biến bí mật `DEEPSEEK_API_KEY` trên Cloudflare Worker (lấy key tại https://platform.deepseek.com).
+- Đứng trên Titan 4 Mega trong menu nhóm Mạnh nhất.

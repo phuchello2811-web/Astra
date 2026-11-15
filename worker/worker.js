@@ -1,20 +1,24 @@
 // Máy chủ trung gian cho trang GLM: giữ API key Z.ai để mọi người dùng chung mà không thấy key.
 //
 // An toàn:
-// - Key nằm trong biến bí mật ZAI_API_KEY (và NVIDIA_API_KEY nếu có) của Cloudflare, không có trong code.
-// - Chỉ cho dùng mô hình miễn phí, nên kể cả bị lạm dụng cũng không mất tiền.
+// - Key nằm trong biến bí mật ZAI_API_KEY, NVIDIA_API_KEY, DEEPSEEK_API_KEY (nếu có) của Cloudflare, không có trong code.
+// - Chỉ cho dùng mô hình miễn phí / có key riêng, nên kể cả bị lạm dụng cũng không mất tiền ngoài hạn mức key.
 // - Chỉ trình duyệt mở từ các trang trong ALLOWED_ORIGINS mới gọi được (chặn trang web khác dùng ké).
 // - Giới hạn số lượt hỏi mỗi phút cho mỗi địa chỉ IP.
 //
 // Các đường dẫn:
-// - POST /        chat với GLM (Z.ai).
+// - POST /        chat với GLM (Z.ai) hoặc DeepSeek / NVIDIA.
 // - POST /image   tạo ảnh bằng Cloudflare Workers AI (cần binding AI, xem README).
 // - POST /sync    đồng bộ lịch sử chat giữa các máy (cần binding D1 tên DB, xem README).
-// - POST /status  kiểm tra mô hình NVIDIA nào đang trả lời được (để menu chọn mô hình hiện trạng thái).
+// - POST /status  kiểm tra mô hình mạnh nào đang trả lời được (để menu chọn mô hình hiện trạng thái).
 
 const UPSTREAM = "https://api.z.ai/api/paas/v4/chat/completions";
 const FREE_MODELS = ["glm-4.7-flash", "glm-4.5-flash", "glm-4.6v-flash"];
 const VISION_MODEL = "glm-4.6v-flash"; // mô hình miễn phí duy nhất của Z.ai đọc được ảnh
+// DeepSeek gọi thẳng API chính thức (ổn định hơn NVIDIA NIM). Cần biến bí mật DEEPSEEK_API_KEY.
+const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+const DEEPSEEK_ID = "deepseek-v4.1-flash"; // id nội bộ trên trang Astra
+const DEEPSEEK_MODEL = "deepseek-flash"; // id thật trên API DeepSeek (V4.1 Flash, có vision)
 // Các mô hình miễn phí trên NVIDIA (build.nvidia.com, khoảng 40 lượt mỗi phút cho cả tài khoản), cần biến bí mật NVIDIA_API_KEY.
 // Bản miễn phí của NVIDIA hay quá tải (xếp hàng nhiều phút, hoặc trả 200 mà không gửi gì): chỉ chờ chữ đầu tiên tối đa
 // NVIDIA_WAIT, không được thì dùng GLM của Z.ai và tạm bỏ qua mô hình đó một lúc để các câu sau khỏi phải chờ lại.
@@ -27,7 +31,6 @@ const NVIDIA_MODELS = {
   "nemotron-3.5-super-vl": { id: "nvidia/nemotron-3.5-super-vl-120b-a12b", title: "Nemotron 3.5 Super VL", vision: true, think: "kwargs" },
   "nemotron-3.5-lightning": { id: "nvidia/nemotron-3.5-lightning-30b-a3b", title: "Nemotron 3.5 Lightning", think: "kwargs" },
   "mistral-large-4": { id: "mistralai/mistral-large-4-1t-a52b", title: "Mistral Large 4" },
-  "deepseek-v4.1-flash": { id: "deepseek-ai/deepseek-v4.1-flash", title: "DeepSeek V4.1 Flash", think: "kwargs" },
   "minimax-m3.1-flash": { id: "minimaxai/minimax-m3.1-flash", title: "MiniMax M3.1 Flash" },
   "step-5": { id: "stepfun-ai/step-5-preview", title: "Step 5" },
   "nemotron-3-super": { id: "nvidia/nemotron-3-super-120b-a12b", title: "Nemotron 3 Super", think: "kwargs", trial: true },
@@ -43,7 +46,7 @@ const NVIDIA_MODELS = {
 const NVIDIA_WAIT = 25_000; // chờ chữ đầu tiên tối đa 25 giây
 const STALL = 90_000; // đang trả lời mà đứng yên quá 90 giây thì ngắt, để trang tự nối lại
 const nvidiaDown = new Map(); // mô hình -> { until, note }: tạm bỏ qua sau khi lỗi
-let statusCache = null; // kết quả kiểm tra các mô hình NVIDIA gần nhất
+let statusCache = null; // kết quả kiểm tra các mô hình mạnh gần nhất
 const MAX_IMAGES = 8;
 const DEFAULT_ORIGINS = [
   "https://phuchello2811-web.github.io",
@@ -146,10 +149,22 @@ export default {
       effort: body.effort === "max" ? "max" : "high", // chế độ Nghĩ kỹ: GLM-5.3 suy nghĩ ở mức tối đa
     };
 
-    // Mô hình trên NVIDIA: thử NVIDIA trước. Câu hỏi có ảnh mà mô hình đã chọn không đọc được ảnh thì dùng GLM-5.3 Flash.
+    // DeepSeek gọi thẳng API chính thức (ổn định hơn NVIDIA). Titan Pro XS = deepseek-v4.1-flash.
+    // Các mô hình NVIDIA còn lại: thử NVIDIA trước. Câu hỏi có ảnh mà mô hình không đọc được ảnh thì dùng GLM-5.3 Flash.
     // Không dùng được thì trả lời bằng GLM của Z.ai và ghi lý do vào X-GLM-Note để trang hiện cho người dùng.
     let upstream, used, note = "", stream = null;
-    let nv = NVIDIA_MODELS[body.model] ? body.model : null;
+    if (body.model === DEEPSEEK_ID) {
+      const title = "DeepSeek V4.1 Flash", down = nvidiaDown.get(DEEPSEEK_ID);
+      if (!env.DEEPSEEK_API_KEY) note = `${title} chưa được bật trên máy chủ (thiếu DEEPSEEK_API_KEY)`;
+      else if (!clean.stream) note = `${title} chỉ dùng khi trả lời dạng luồng`;
+      else if (down && down.until > Date.now()) note = `${title} ${down.note}; máy chủ sẽ thử lại sau ${Math.ceil((down.until - Date.now()) / 60_000)} phút`;
+      else {
+        const r = await callDeepseek(clean, env, NVIDIA_WAIT);
+        if (r.body) { nvidiaDown.delete(DEEPSEEK_ID); used = DEEPSEEK_ID; stream = r.body; }
+        else { nvidiaDown.set(DEEPSEEK_ID, { until: Date.now() + r.cool, note: r.note }); note = `${title} ${r.note}`; }
+      }
+    }
+    let nv = !used && NVIDIA_MODELS[body.model] ? body.model : null;
     if (nv && images && !NVIDIA_MODELS[nv].vision) nv = "glm-5.3-flash";
     if (nv) {
       const title = NVIDIA_MODELS[nv].title, down = nvidiaDown.get(nv);
@@ -259,23 +274,104 @@ async function callNvidia(name, clean, env, wait) {
   }
 }
 
-// Kiểm tra nhanh từng mô hình NVIDIA (lưu kết quả 2 phút), gửi đúng tham số suy nghĩ như khi chat thật.
+// Gọi DeepSeek API chính thức (deepseek-flash = V4.1 Flash). Thành công: { body }; thất bại: { note, cool }.
+async function callDeepseek(clean, env, wait) {
+  const { thinking, effort, ...rest } = clean;
+  const on = thinking.type !== "disabled";
+  // DeepSeek: thinking.type + reasoning_effort (low/high/max). Ảnh gửi dạng data:image/...;base64 như OpenAI.
+  const think = {
+    thinking: { type: on ? "enabled" : "disabled" },
+    ...(on ? { reasoning_effort: effort === "max" ? "max" : "high" } : {}),
+  };
+  const timer = new AbortController(), t = setTimeout(() => timer.abort(), wait);
+  const timeout = new Promise((_, no) => timer.signal.addEventListener("abort", () => no(new Error("timeout"))));
+  timeout.catch(() => {});
+  let reader;
+  try {
+    const send = (max_tokens) => Promise.race([fetch(DEEPSEEK_URL, {
+      method: "POST",
+      signal: timer.signal,
+      headers: { "Content-Type": "application/json", Accept: "text/event-stream", Authorization: `Bearer ${env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({ ...rest, stream: true, model: DEEPSEEK_MODEL, ...think, max_tokens }),
+    }), timeout]);
+    let res = await send(Math.min(rest.max_tokens, 65536));
+    if (res.status === 400) {
+      const text = await res.text().catch(() => "");
+      res = /max_tokens|context|too large|maximum/i.test(text) ? await send(16384) : new Response(text, { status: 400 });
+    }
+    if (!res.ok) {
+      const detail = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 160);
+      clearTimeout(t);
+      if (res.status === 401 || res.status === 403) return { note: `bị từ chối (${res.status}): kiểm tra lại DEEPSEEK_API_KEY`, cool: 600_000 };
+      if (res.status === 429) return { note: "hết lượt hoặc đang quá tải (429)", cool: 60_000 };
+      if (res.status === 402) return { note: "hết credit / cần nạp thêm (402)", cool: 300_000 };
+      return { note: `báo lỗi ${res.status}: ${detail}`, cool: 300_000 };
+    }
+    reader = res.body.getReader();
+    const chunks = [], dec = new TextDecoder();
+    let text = "";
+    while (!/data:\s*\{/.test(text)) {
+      const { value, done } = await Promise.race([reader.read(), timeout]);
+      if (done) break;
+      chunks.push(value); text += dec.decode(value, { stream: true });
+    }
+    clearTimeout(t);
+    if (!/data:\s*\{/.test(text)) return { note: "không trả về nội dung", cool: 300_000 };
+    const body = new ReadableStream({
+      start(c) { for (const ch of chunks) c.enqueue(ch); },
+      async pull(c) {
+        let stall;
+        const r = await Promise.race([reader.read(), new Promise((ok) => { stall = setTimeout(() => ok(null), STALL); })]);
+        clearTimeout(stall);
+        if (!r) { reader.cancel().catch(() => {}); c.error(new Error("DeepSeek ngừng gửi dữ liệu")); }
+        else if (r.done) c.close();
+        else c.enqueue(r.value);
+      },
+      cancel() { reader.cancel().catch(() => {}); },
+    });
+    return { body };
+  } catch {
+    clearTimeout(t);
+    reader?.cancel().catch(() => {});
+    return timer.signal.aborted
+      ? { note: `không trả lời sau ${wait / 1000} giây (đang quá đông)`, cool: 300_000 }
+      : { note: "không kết nối được", cool: 120_000 };
+  }
+}
+
+// Kiểm tra nhanh từng mô hình mạnh (lưu kết quả 2 phút). DeepSeek kiểm tra riêng; NVIDIA như cũ.
 // Mô hình đang bị tạm bỏ qua thì báo luôn, không gọi lại. all = kiểm tra cả các mô hình thử (trial).
 async function nvidiaStatus(env, all) {
-  if (!env.NVIDIA_API_KEY) return { enabled: false, models: {} };
   const cache = statusCache?.[all ? "all" : "menu"];
   if (cache && Date.now() - cache.at < 120_000) return cache.data;
   const probe = { messages: [{ role: "user", content: "Hi" }], stream: true, temperature: 0.6, top_p: 0.95, max_tokens: 16, thinking: { type: "enabled" }, effort: "high" };
   const models = {};
-  await Promise.all(Object.keys(NVIDIA_MODELS).filter((n) => all || !NVIDIA_MODELS[n].trial).map(async (name) => {
-    const down = nvidiaDown.get(name);
-    if (down && down.until > Date.now()) { models[name] = { ok: false, note: down.note, gone: down.gone }; return; }
-    const start = Date.now();
-    const r = await callNvidia(name, probe, env, 20_000);
-    if (r.body) { r.body.cancel().catch(() => {}); nvidiaDown.delete(name); models[name] = { ok: true, ms: Date.now() - start }; }
-    else { nvidiaDown.set(name, { until: Date.now() + r.cool, note: r.note, gone: r.gone }); models[name] = { ok: false, note: r.note, gone: r.gone }; }
-  }));
-  statusCache = { ...statusCache, [all ? "all" : "menu"]: { at: Date.now(), data: { enabled: true, models } } };
+  // DeepSeek (API riêng)
+  if (env.DEEPSEEK_API_KEY) {
+    const down = nvidiaDown.get(DEEPSEEK_ID);
+    if (down && down.until > Date.now()) models[DEEPSEEK_ID] = { ok: false, note: down.note };
+    else {
+      const start = Date.now();
+      const r = await callDeepseek(probe, env, 20_000);
+      if (r.body) { r.body.cancel().catch(() => {}); nvidiaDown.delete(DEEPSEEK_ID); models[DEEPSEEK_ID] = { ok: true, ms: Date.now() - start }; }
+      else { nvidiaDown.set(DEEPSEEK_ID, { until: Date.now() + r.cool, note: r.note }); models[DEEPSEEK_ID] = { ok: false, note: r.note }; }
+    }
+  } else {
+    models[DEEPSEEK_ID] = { ok: false, note: "thiếu DEEPSEEK_API_KEY" };
+  }
+  // NVIDIA
+  if (env.NVIDIA_API_KEY) {
+    await Promise.all(Object.keys(NVIDIA_MODELS).filter((n) => all || !NVIDIA_MODELS[n].trial).map(async (name) => {
+      const down = nvidiaDown.get(name);
+      if (down && down.until > Date.now()) { models[name] = { ok: false, note: down.note, gone: down.gone }; return; }
+      const start = Date.now();
+      const r = await callNvidia(name, probe, env, 20_000);
+      if (r.body) { r.body.cancel().catch(() => {}); nvidiaDown.delete(name); models[name] = { ok: true, ms: Date.now() - start }; }
+      else { nvidiaDown.set(name, { until: Date.now() + r.cool, note: r.note, gone: r.gone }); models[name] = { ok: false, note: r.note, gone: r.gone }; }
+    }));
+  }
+  const enabled = !!(env.DEEPSEEK_API_KEY || env.NVIDIA_API_KEY);
+  statusCache = { ...statusCache, [all ? "all" : "menu"]: { at: Date.now(), data: { enabled, models } } };
   return statusCache[all ? "all" : "menu"].data;
 }
 
