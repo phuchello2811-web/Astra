@@ -1077,10 +1077,10 @@
       name: "Astra",
       url: SHARED_URL,
       // Phải khớp FREE_MODELS trong worker/worker.js.
-      // Titan Pro XS = DeepSeek V4.1 Flash (NVIDIA, có vision). MiniMax M3.1 Flash trong menu; Kimi K2.6 đã bị NVIDIA gỡ (404).
+      // Titan Pro XS = DeepSeek V4.1 Flash (API DeepSeek trực tiếp, có vision). Các mô hình còn lại chạy NVIDIA; máy chủ tự dùng GLM của Z.ai khi chúng bận.
       models: ["deepseek-v4.1-flash", "glm-5.3-flash", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash",
         "glm-4.7-flash", "glm-4.5-flash", "glm-4.6v-flash"],
-      // Chạy trên NVIDIA (phải khớp NVIDIA_MODELS trong worker/worker.js); máy chủ tự dùng GLM của Z.ai khi chúng bận.
+      // Nhóm "Mạnh nhất" (deepseek dùng DEEPSEEK_API_KEY; còn lại NVIDIA_API_KEY). Phải khớp worker.js.
       nvidia: ["deepseek-v4.1-flash", "glm-5.3-flash", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash"],
       // Mô hình đọc được ảnh: câu hỏi có ảnh gửi tới mô hình đang chọn nếu nó đọc được ảnh, không thì tới visionNvidia,
       // máy chủ lỗi thì tới vision (GLM-4.6V Flash của Z.ai).
