@@ -5,7 +5,11 @@ const SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
-  "./sw.js"
+  "./icons/icon.svg",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png",
+  "./icons/apple-touch-icon.png",
+  "./icons/favicon-32.png",
 ];
 
 self.addEventListener("install", (e) => {
@@ -14,27 +18,27 @@ self.addEventListener("install", (e) => {
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim())
+    caches.keys()
+      // Chỉ xoá cache cũ của app này: các app khác cùng tên miền github.io dùng chung kho cache.
+      // Cache cũ có tên "glm-…" (trước khi đổi tên thành Astra) cũng được xoá.
+      .then((keys) => Promise.all(keys.filter((k) => /^(astra|glm)-/.test(k) && k !== VERSION).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
 });
 
+// Chỉ xử lý file của chính trang. Yêu cầu tới server mô hình (127.0.0.1) đi thẳng, không qua cache.
+// Lấy bản mới từ mạng trước, mất mạng thì dùng bản đã lưu.
+// cache: "no-cache" bắt trình duyệt hỏi lại máy chủ mỗi lần (không đổi thì chỉ nhận 304 rất nhẹ), vì GitHub Pages
+// cho giữ file 10 phút: không có dòng này thì sau khi cập nhật, người dùng vẫn thấy bản cũ tới 10 phút.
 self.addEventListener("fetch", (e) => {
-  const u = new URL(e.request.url);
-  if (e.request.method !== "GET" || u.origin !== self.location.origin) return;
-  // API và worker không cache.
-  if (u.pathname.includes("/api") || u.pathname.includes("worker")) return;
+  const url = new URL(e.request.url);
+  if (e.request.method !== "GET" || url.origin !== location.origin) return;
   e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const net = fetch(e.request)
-        .then((res) => {
-          if (res.ok && (u.pathname.endsWith(".html") || u.pathname.endsWith("/") || u.pathname.endsWith(".js") || u.pathname.endsWith(".webmanifest"))) {
-            const copy = res.clone();
-            caches.open(VERSION).then((c) => c.put(e.request, copy));
-          }
-          return res;
-        })
-        .catch(() => cached);
-      return cached || net;
-    })
+    fetch(e.request.mode === "navigate" ? url.href : e.request, { cache: "no-cache", credentials: "same-origin" })
+      .then((res) => {
+        if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(e.request, copy)); }
+        return res;
+      })
+      .catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => r || caches.match("./index.html")))
   );
 });
