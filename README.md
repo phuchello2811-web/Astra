@@ -56,6 +56,10 @@ Nhóm **Mạnh nhất** (12 mô hình chung một nhóm; chạy trên NVIDIA, Go
 | **Atlas 6 Omega** | Gemini 4 Hydrogen, suy nghĩ `xhigh` (Google AI Studio) | sâu nhất: bài rất khó, code lớn, nhiều bước; có thể nghĩ nhiều phút |
 | **Atlas 6 High** | Gemini 4 Hydrogen, suy nghĩ `high` | suy luận, toán, code, đọc ảnh và tài liệu dài |
 | **Atlas 6 Medium** | Gemini 4 Hydrogen, suy nghĩ `medium` | nhanh hơn, hợp câu hỏi thường, viết và tóm tắt |
+| **Helios 3.8 Flash** | Gemini 3.8 Flash | nhóm **Pro**: Flash mới nhất, code lớn, nhiều bước |
+| **Helios 3.6 Flash** | Gemini 3.6 Flash | nhóm **Pro**: cân bằng tốc độ và độ sâu |
+| **Helios 3.5 Flash-Lite** | Gemini 3.5 Flash-Lite | nhóm **Pro**: nhẹ và rất nhanh |
+| **Helios 3.1 Flash-Lite** | Gemini 3.1 Flash-Lite | nhóm **Pro**: tiết kiệm nhất dòng Helios |
 | **Forge X** | gpt-oss-120b (Groq) | mô hình lớn, trả lời nhanh, suy luận và viết code mạnh |
 | **Titan 3 Ultra** | Nemotron 3 Ultra | rất thông minh, suy luận, toán và code rất tốt |
 | **Titan 3.5 Vision** | Nemotron 3.5 Super VL | đọc ảnh giỏi, suy nghĩ kỹ; câu hỏi có ảnh tự gửi tới mô hình này |
@@ -210,7 +214,7 @@ và câu hỏi vẫn tự chạy dự phòng qua **Nova 4.7** (GLM của Z.ai), 
 | --- | --- | --- | --- |
 | `ZAI_API_KEY` | có | nhóm Nova (dự phòng cho mọi mô hình) | https://z.ai |
 | `NVIDIA_API_KEY` | không | Titan, Lyra, Atlas, Forge XS, Nova 5 Prime | https://build.nvidia.com |
-| `GEMINI_API_KEY` | không | Atlas 6 Medium, High, Omega | https://aistudio.google.com/apikey |
+| `GEMINI_API_KEY` | không | Atlas 6 Medium, High, Omega và các mô hình Helios | https://aistudio.google.com/apikey |
 | `GEMINI_API_KEY_2`, `GEMINI_API_KEY_3` | không | key dự phòng cho Atlas 6 Omega: key đang dùng hết lượt (429), sai, hoặc quá tải thì tự chuyển sang key kế tiếp | nên tạo ở **project Google khác** để có hạn mức riêng |
 | `GROQ_API_KEY_2`, `GROQ_API_KEY_3` | không | key dự phòng cho Forge X, cùng cách | — |
 | `GROQ_API_KEY` | không | Forge X (gpt-oss-120b) | https://console.groq.com/keys |
@@ -237,3 +241,17 @@ Ghi chú kỹ thuật: Atlas 6 Omega gọi **API gốc** của Google (`v1beta/m
 giống Google AI Studio, theo đúng tài liệu của model: không gửi `temperature`/`top_p`, mức suy nghĩ `high` (Kỹ/Tối đa/Ultra: `xhigh`),
 phần suy nghĩ được đổi sang khung suy nghĩ của Astra. Google quá tải (503) thì máy chủ thử lại 2 lần, rồi dùng `gemini-3.8-flash`,
 cuối cùng mới tới Nova 4.7. Muốn quay lại lớp tương thích OpenAI thì đặt biến thường `GEMINI_ENDPOINT=openai`.
+
+
+## Nhóm mô hình trong menu
+
+Menu xếp từ cao xuống thấp, trong mỗi nhóm các mô hình cùng dòng đứng liền nhau (Titan với Titan, Forge với Forge, Nova với Nova):
+
+| Nhóm | Mô hình |
+|---|---|
+| **Premium** | Atlas 6 Omega, High, Medium |
+| **Pro** | Helios 3.8 Flash, 3.6 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite |
+| **Plus** | Titan 4 Mega, 3 Ultra, 3.5 Vision, 3.5 Lightning · Forge X, Forge XS · Atlas 5 · Nova 5 Prime · Lyra 4 |
+| **Standard** | Nova 4.7, Nova 4.5, Nova 4.6 Vision |
+
+Helios chỉ gồm các bản Gemini có gói miễn phí (Gemini 4 Argon và 3.1 Pro Preview phải trả phí nên không đưa vào). Helios dùng chung `GEMINI_API_KEY` với Atlas 6 nhưng nhận lời nhắc hệ thống, kỹ năng và công cụ của Astra như các mô hình khác; mức suy nghĩ theo chế độ trên trang. Muốn đổi id Google của một bản Helios, sửa dòng `helios("…", "…")` tương ứng trong `EXTERNAL_MODELS` của `worker.js` (và `worker/worker.js`).

@@ -140,6 +140,7 @@
   .menu-head b { display: block; font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
   .menu-head small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
   .model-menu .group { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 12px 10px 6px; }
+  .model-menu .group span { margin-left: 8px; font-weight: 500; text-transform: none; letter-spacing: 0; opacity: .75; }
   .model-menu .opt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 9px 10px; border-radius: 12px;
     border: 1px solid transparent; transition: background .12s, border-color .12s, transform .12s; }
   .model-menu .opt:hover { background: var(--hover); }
@@ -1186,12 +1187,12 @@
       url: SHARED_URL,
       // Phải khớp FREE_MODELS trong worker/worker.js.
       // Atlas 6 Medium/High/Omega = gemini-4-hydrogen trên Google AI Studio với mức suy nghĩ cố định medium/high/xhigh (GEMINI_API_KEY). Forge X = gpt-oss-120b (Groq).
-      models: ["glm-5.3-flash", "gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "gpt-oss-120b", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash",
+      models: ["glm-5.3-flash", "gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "helios-3.8-flash", "helios-3.6-flash", "helios-3.5-flash-lite", "helios-3.1-flash-lite", "gpt-oss-120b", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash",
         "glm-4.7-flash", "glm-4.5-flash", "glm-4.6v-flash"],
       // Toàn bộ 12 model mạnh đứng chung một nhóm "Mạnh nhất" (không còn tách rời). Atlas 6 có 3 bản theo mức suy nghĩ.
-      nvidia: ["glm-5.3-flash", "gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "gpt-oss-120b", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash"],
+      nvidia: ["glm-5.3-flash", "gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "helios-3.8-flash", "helios-3.6-flash", "helios-3.5-flash-lite", "helios-3.1-flash-lite", "gpt-oss-120b", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash"],
       visionNvidia: "nemotron-3.5-super-vl",
-      visionModels: ["gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "glm-5.3-flash", "nemotron-3.5-super-vl"],
+      visionModels: ["gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "helios-3.8-flash", "helios-3.6-flash", "helios-3.5-flash-lite", "helios-3.1-flash-lite", "glm-5.3-flash", "nemotron-3.5-super-vl"],
       vision: "glm-4.6v-flash",
       // Chỉ ghi tên trong Astra + ưu điểm, không lộ tên gốc.
       titles: {
@@ -1199,6 +1200,10 @@
         "gemini-4-hydrogen": ["Atlas 6 Omega", "Suy nghĩ sâu nhất (extra high): bài rất khó, code lớn, nhiều bước; có thể nghĩ nhiều phút"],
         "gemini-4-hydrogen-high": ["Atlas 6 High", "Suy nghĩ kỹ (high): suy luận, toán, code và đọc ảnh, tài liệu dài rất tốt"],
         "gemini-4-hydrogen-medium": ["Atlas 6 Medium", "Suy nghĩ vừa (medium): nhanh hơn, hợp câu hỏi thường, viết và tóm tắt"],
+        "helios-3.8-flash": ["Helios 3.8 Flash", "Flash mạnh nhất: viết code lớn, nhiều bước, trả lời nhanh"],
+        "helios-3.6-flash": ["Helios 3.6 Flash", "Cân bằng tốc độ và độ sâu, hợp việc hằng ngày, viết, code và tóm tắt"],
+        "helios-3.5-flash-lite": ["Helios 3.5 Flash-Lite", "Nhẹ và rất nhanh, hợp câu hỏi ngắn, dịch và trò chuyện"],
+        "helios-3.1-flash-lite": ["Helios 3.1 Flash-Lite", "Tiết kiệm nhất dòng Helios, trả lời gần như tức thì"],
         "gpt-oss-120b": ["Forge X", "Mô hình lớn, trả lời nhanh, suy luận và viết code mạnh"],
         "nemotron-3-ultra": ["Titan 3 Ultra", "Rất thông minh: suy luận, toán và code rất tốt"],
         "nemotron-3.5-super-vl": ["Titan 3.5 Vision", "Đọc ảnh giỏi, suy nghĩ kỹ, bắt được bẫy trong đề"],
@@ -1216,6 +1221,10 @@
         "gemini-4-hydrogen": ["#4f46e5", "#06b6d4", "M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4Z"],
         "gemini-4-hydrogen-high": ["#2563eb", "#22d3ee", "M12 4l1.8 5.7L19.5 12l-5.7 1.8L12 19.5l-1.8-5.7L4.5 12l5.7-1.8Z"],
         "gemini-4-hydrogen-medium": ["#0891b2", "#34d399", "M12 6.5l1.2 3.8 3.8 1.7-3.8 1.7L12 17.5l-1.2-3.8L7 12l3.8-1.7Z"],
+        "helios-3.8-flash": ["#f97316", "#facc15", "M12 5.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM13.2 8.2 9.6 12.6h2.7L10.9 16l3.6-4.4h-2.7ZM12 1.8v1.8M12 20.4v1.8M1.8 12h1.8M20.4 12h1.8"],
+        "helios-3.6-flash": ["#fb923c", "#f472b6", "M3 18h18M6.5 18a5.5 5.5 0 0 1 11 0M12 6.5v3M5.2 10.2l2 2M18.8 10.2l-2 2M2 15h2M20 15h2M8 21.5h8"],
+        "helios-3.5-flash-lite": ["#fbbf24", "#34d399", "M7.5 19h9.5a3.5 3.5 0 0 0 .3-7 5.5 5.5 0 0 0-10.6 1.6A2.8 2.8 0 0 0 7.5 19ZM18.5 3v1.8M22 6.5h-1.8M15.6 4.1l1.2 1.2"],
+        "helios-3.1-flash-lite": ["#fcd34d", "#fb7185", "M20 14.4A8 8 0 1 1 9.6 4a6.4 6.4 0 0 0 10.4 10.4ZM17.5 2.8v3.4M15.8 4.5h3.4"],
         "gpt-oss-120b": ["#8b5cf6", "#ec4899", "M4 4h16v16H4zM8 8h8v8H8z"],
         "nemotron-3-ultra": ["#6d28d9", "#2563eb", "M6 3h12l4 6-10 12L2 9l4-6ZM2 9h20M12 21 8 9l2-6M12 21l4-12-2-6"],
         "nemotron-3.5-super-vl": ["#0891b2", "#22c55e", "M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12ZM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"],
@@ -1250,10 +1259,18 @@
 
   const modelTitle = (id, m) => PROVIDERS[id].titles[m]?.[0] || m;
   // Ghi chú của máy chủ dùng tên gốc của mô hình: đổi sang tên của Astra.
-  const ORIGINAL_NAMES = { "Gemini 4 Hydrogen Medium": "gemini-4-hydrogen-medium", "Gemini 4 Hydrogen High": "gemini-4-hydrogen-high", "gpt-oss-120b": "gpt-oss-120b", "Gemini 4 Hydrogen": "gemini-4-hydrogen", "GLM-5.3 Flash": "glm-5.3-flash", "Nemotron 3 Ultra": "nemotron-3-ultra", "Nemotron 3.5 Super VL": "nemotron-3.5-super-vl", "Nemotron 3.5 Lightning": "nemotron-3.5-lightning",
+  const ORIGINAL_NAMES = { "Gemini 3.6 Flash": "helios-3.6-flash", "Gemini 3.5 Flash-Lite": "helios-3.5-flash-lite", "Gemini 3.1 Flash-Lite": "helios-3.1-flash-lite", "Gemini 3.8 Flash": "helios-3.8-flash", "Gemini 4 Hydrogen Medium": "gemini-4-hydrogen-medium", "Gemini 4 Hydrogen High": "gemini-4-hydrogen-high", "gpt-oss-120b": "gpt-oss-120b", "Gemini 4 Hydrogen": "gemini-4-hydrogen", "GLM-5.3 Flash": "glm-5.3-flash", "Nemotron 3 Ultra": "nemotron-3-ultra", "Nemotron 3.5 Super VL": "nemotron-3.5-super-vl", "Nemotron 3.5 Lightning": "nemotron-3.5-lightning",
     "Mistral Large 4": "mistral-large-4", "Laguna XS": "laguna-xs", "Step 5": "step-5", "MiniMax M3.1 Flash": "minimax-m3.1-flash", "GLM-4.7 Flash": "glm-4.7-flash", "GLM-4.5 Flash": "glm-4.5-flash", "GLM-4.6V Flash": "glm-4.6v-flash" };
   const brandNote = (t) => Object.entries(ORIGINAL_NAMES).reduce((a, [o, id]) => a.split(o).join(modelTitle("shared", id)), String(t || ""))
     .replace(/GLM của Z\.ai|Z\.ai|(?:NVIDIA|GROQ|GEMINI)_API_KEY(?:_\d)?|GEMINI_MODEL|NVIDIA/g, (w) => (/_API_KEY(_\d)?$|_MODEL$/.test(w) ? "khoá máy chủ" : "máy chủ dự phòng")).replace(/\b(?:openai\/)?(?:gemini|gpt-oss)-[\w.-]+/gi, "mô hình gốc");
+  // Gói của từng mô hình, xếp từ cao xuống thấp; trong gói xếp theo dòng (Titan chung với Titan, Forge chung với Forge…).
+  // Premium: Atlas 6 · Pro: Helios · Plus: dòng chạy trên NVIDIA và Forge X · Standard: dòng Nova của Z.ai.
+  const TIERS = [
+    { name: "Premium", sub: "Suy nghĩ sâu nhất", ids: ["gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium"] },
+    { name: "Pro", sub: "Nhanh, thông minh, đọc ảnh và tài liệu dài", ids: ["helios-3.8-flash", "helios-3.6-flash", "helios-3.5-flash-lite", "helios-3.1-flash-lite"] },
+    { name: "Plus", sub: "Mạnh và đa dạng", ids: ["glm-5.3-flash", "nemotron-3-ultra", "nemotron-3.5-super-vl", "nemotron-3.5-lightning", "gpt-oss-120b", "laguna-xs", "step-5", "minimax-m3.1-flash", "mistral-large-4"] },
+    { name: "Standard", sub: "Nhẹ và ổn định", ids: ["glm-4.7-flash", "glm-4.5-flash", "glm-4.6v-flash"] },
+  ];
   // Biểu tượng của một mô hình (ô màu có hình vẽ).
   const modelIcon = (m) => {
     const [a, b, d] = PROVIDERS.shared.looks[m] || ["#64748b", "#94a3b8", "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"];
@@ -1368,14 +1385,16 @@
     } else {
       html = `<div class="menu-head"><b>Mô hình của Astra</b><small>Đều dùng cách suy nghĩ, công cụ và quy trình kiểm tra của Astra</small></div>`;
       for (const id of Object.keys(PROVIDERS)) {
-        let group = "";
-        for (const m of PROVIDERS[id].models) {
-          // Chia nhóm theo nơi chạy: mô hình trên NVIDIA là nhóm mạnh (Titan 4 Mega có mã glm-5.3-flash nhưng chạy trên NVIDIA).
-          const g = PROVIDERS[id].nvidia?.includes(m) ? "Mạnh nhất" : "Nhanh và ổn định";
-          if (g !== group) { html += `<div class="group">${g}</div>`; group = g; }
-          const [title, desc] = PROVIDERS[id].titles[m];
-          html += `<button role="menuitemradio" class="opt" data-key="${id}:${m}" aria-checked="${`${id}:${m}` === currentChoice()}">${modelIcon(m)}` +
-            `<span class="opt-tx"><b>${title}<em class="st" data-st="${m}"></em></b><small>${desc}</small></span>${TICK}</button>`;
+        // Chia nhóm theo gói (Premium, Pro, Plus, Standard); trong mỗi gói các mô hình cùng dòng (Titan, Forge, Nova…) đứng liền nhau.
+        for (const tier of TIERS) {
+          const list = tier.ids.filter((m) => PROVIDERS[id].models.includes(m));
+          if (!list.length) continue;
+          html += `<div class="group">${tier.name}<span>${tier.sub}</span></div>`;
+          for (const m of list) {
+            const [title, desc] = PROVIDERS[id].titles[m];
+            html += `<button role="menuitemradio" class="opt" data-key="${id}:${m}" aria-checked="${`${id}:${m}` === currentChoice()}">${modelIcon(m)}` +
+              `<span class="opt-tx"><b>${title}<em class="st" data-st="${m}"></em></b><small>${desc}</small></span>${TICK}</button>`;
+          }
         }
       }
     }
@@ -2047,7 +2066,12 @@
     "Cách đọc ảnh: (1) nhìn tổng thể; (2) quét từng vùng từ trên xuống, trái sang phải, gồm góc & chữ nhỏ; " +
     "(3) chép NGUYÊN VĂN chữ, số, công thức; (4) biểu đồ/bảng: đọc tiêu đề, trục, đơn vị, chú thích trước; " +
     "(5) toán/code trong ảnh: chép lại rồi giải & kiểm chứng bằng công cụ; (6) chỗ mờ nói rõ không đọc được, không bịa.";
+  const HELIOS_PROFILE = "Sở trường & kỷ luật Helios:\n- Tài liệu dài và nhiều ảnh: đọc hết, chép nguyên văn số liệu, nêu rõ chỗ không chắc.\n- Bài nhiều bước: kiểm từng chặng bằng py-run/js-run, thử biên (0, rỗng, âm, trùng, lớn) trước khi chốt.";
   const MODEL_PROFILES = {
+    "helios-3.8-flash": HELIOS_PROFILE,
+    "helios-3.6-flash": HELIOS_PROFILE,
+    "helios-3.5-flash-lite": HELIOS_PROFILE,
+    "helios-3.1-flash-lite": HELIOS_PROFILE,
     "glm-5.3-flash": "Sở trường & kỷ luật Titan 4 Mega:\n- Cân bằng tốc độ và độ sâu: câu dễ gọn ngay; câu khó đi 2 hướng độc lập và chạy công cụ kiểm chứng.\n- Chống tự tin quá mức: luôn thử tìm 1 phản ví dụ hoặc case suy biến để bác bỏ đáp án nháp.\n- Ảnh: " + VISION_PROMPT,
     "gpt-oss-120b": "Sở trường & kỷ luật Forge X:\n- Tốc độ cao với bài nhiều ràng buộc: lập checklist kiểm từng ràng buộc thay vì dựa cảm giác.\n- Toán & code: kiểm chứng qua py-run/js-run/cpp-run và thử biên (0, rỗng, âm, trùng, lớn).",
     "nemotron-3-ultra": "Sở trường & kỷ luật Titan 3 Ultra:\n- Toán, chứng minh và thuật toán: lập luận chặt, nêu định lý & điều kiện áp dụng, xét đủ nhánh đặc biệt.\n- Chống chủ quan: dù thấy hiển nhiên vẫn chạy code với số nhỏ hoặc thay ngược đề để xác nhận 100%.",

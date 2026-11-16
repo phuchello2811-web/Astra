@@ -1,6 +1,6 @@
 // Lưu sẵn giao diện để web app mở được cả khi không có mạng.
 // Đổi VERSION mỗi khi cập nhật index.html để máy người dùng nhận bản mới.
-const VERSION = "astra-v78";
+const VERSION = "astra-v79";
 const SHELL = [
   "./",
   "./index.html",
