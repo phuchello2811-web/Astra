@@ -420,11 +420,6 @@
   .ide-tools { display: flex; gap: 2px; flex: none; align-items: center; }
   .ide-tools .ide-ib { width: 28px; height: 28px; }
   .ide-tools .ide-ib svg { width: 15px; height: 15px; }
-  .ide-ask { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px 0 10px; margin-left: 4px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
-    color: var(--iacc) !important; background: color-mix(in srgb, var(--iacc) 12%, transparent); border: 1px solid color-mix(in srgb, var(--iacc) 30%, transparent);
-    transition: background .12s, box-shadow .15s; }
-  .ide-ask:hover { background: color-mix(in srgb, var(--iacc) 20%, transparent); box-shadow: 0 0 0 3px var(--ring); }
-  .ide-ask svg { width: 14px; height: 14px; }
   .ide-render-btn[hidden] { display: none; }
   .ide-aibtn { width: auto; padding: 0 11px; gap: 6px; display: inline-flex; align-items: center; border-radius: 9px; font-size: 12.5px; font-weight: 600; color: var(--iacc) !important; background: color-mix(in srgb, var(--iacc) 12%, transparent); border: 1px solid color-mix(in srgb, var(--iacc) 30%, transparent); }
   .ide-aibtn:hover { background: color-mix(in srgb, var(--iacc) 20%, transparent); }
@@ -607,8 +602,6 @@
     .ide.side-open .ide-side { transform: none; visibility: visible; box-shadow: 12px 0 32px rgba(0,0,0,.3); }
     .ide-mprev { display: inline-grid; }
     .ide-stabs { display: flex; }
-    .ide-ask span { display: none; }
-    .ide-ask { padding: 0 8px; }
     .ide-tools [data-ide="font-"], .ide-tools [data-ide="font+"] { display: none; }
     .ide-prev { position: absolute; inset: 0; width: auto; min-width: 0; z-index: 5; }
     .ide-ai { position: absolute; inset: 0; width: auto !important; max-width: none; z-index: 7; border-left: 0; }
@@ -5315,7 +5308,6 @@
       `<div class="ide-pane" data-pane="files"><div class="ide-sh">Explorer<span>${ib("new-file", IDE_D.filePlus, "Tạo file mới")}${ib("collapse", IDE_D.collapse, "Thu gọn thư mục")}</span></div><input class="ide-in" data-in="filter" type="search" placeholder="Lọc file…" aria-label="Lọc file"><div class="ide-tree" role="tree"></div></div>` +
       `<div class="ide-pane" data-pane="search" hidden><div class="ide-sh">Tìm trong dự án</div><input class="ide-in" data-in="search" type="search" placeholder="Tìm chữ trong mọi file…" aria-label="Tìm trong dự án"><div class="ide-hits"></div></div></aside>` +
       `<section class="ide-main"><div class="ide-tabs" role="tablist"></div><div class="ide-crumb"><span class="ide-path"></span><span class="ide-tools">` +
-      `<button type="button" class="ide-ask" data-ide="ask-file" title="Hỏi Astra về file này">${ideSvg(IDE_D.spark)}<span>Hỏi Astra</span></button>` +
       `<button type="button" class="ide-editbtn" data-ide="edit" title="Sửa file (Ctrl+E)">${ideSvg(IDE_D.pencil)}<span>Sửa</span></button>` +
       ib("revert", IDE_D.undo, "Khôi phục bản gốc của file này", "ide-revert-btn") +
       ib("render", IDE_D.eye, "Xem dạng hiển thị", "ide-render-btn") + ib("preview", IDE_D.preview, "Xem trước", "ide-mprev") + ib("wrap", IDE_D.wrap, "Tự xuống dòng (Alt+Z)") +
