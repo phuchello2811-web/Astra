@@ -76,7 +76,6 @@ const NVIDIA_MODELS = {
   "nemotron-3.5-super-vl": { id: "nvidia/nemotron-3.5-super-vl-120b-a12b", title: "Nemotron 3.5 Super VL", vision: true, think: "kwargs" },
   "nemotron-3.5-lightning": { id: "nvidia/nemotron-3.5-lightning-30b-a3b", title: "Nemotron 3.5 Lightning", think: "kwargs" },
   "mistral-large-4": { id: "mistralai/mistral-large-4-1t-a52b", title: "Mistral Large 4" },
-  "deepseek-v4.1-flash": { id: "deepseek-ai/deepseek-v4.1-flash", title: "DeepSeek V4.1 Flash", think: "kwargs", vision: true },
   "minimax-m3.1-flash": { id: "minimaxai/minimax-m3.1-flash", title: "MiniMax M3.1 Flash" },
   "step-5": { id: "stepfun-ai/step-5-preview", title: "Step 5" },
   "nemotron-3-super": { id: "nvidia/nemotron-3-super-120b-a12b", title: "Nemotron 3 Super", think: "kwargs", trial: true },
@@ -328,6 +327,8 @@ const nextPacificMidnight = () => { const d = new Date(); d.setUTCHours(8, 0, 0,
 async function callExternal(id, clean, env, wait, outer) {
   const spec = EXTERNAL_MODELS[id];
   const { thinking, effort, level, ...rest } = clean;
+  // Atlas 6: Gemini chỉ nhận đúng hội thoại, không kèm prompt hệ thống hay lời dặn sẵn.
+  if (String(id).startsWith("gemini-4-hydrogen")) rest.messages = atlasRawMessages(rest.messages);
   const on = thinking?.type !== "disabled", max = effort === "max";
   const timer = new AbortController(), t = setTimeout(() => timer.abort(), wait);
   outer?.addEventListener("abort", () => timer.abort(), { once: true });
@@ -535,6 +536,23 @@ async function callZai(clean, images, model, env) {
     if (!BUSY.includes(res.status)) break;
   }
   return { res, used };
+}
+
+// Atlas 6: không gửi systemInstruction hay lời dặn sẵn. Gemini chỉ nhận đúng hội thoại (user/assistant).
+function atlasRawMessages(messages) {
+  const strip = (s) => (typeof s === "string" ? s.replace(/\n\n\(Yêu cầu thêm:[\s\S]*\)$/, "") : s);
+  const out = [];
+  for (const m of messages || []) {
+    if (!m || m.role === "system") continue;
+    if (m.role === "user" && typeof m.content === "string") out.push({ ...m, content: strip(m.content) });
+    else if (m.role === "user" && Array.isArray(m.content)) {
+      out.push({
+        ...m,
+        content: m.content.map((part, i) => (i === 0 && part?.type === "text" && typeof part.text === "string" ? { ...part, text: strip(part.text) } : part)),
+      });
+    } else out.push(m);
+  }
+  return out.length ? out : [{ role: "user", content: "" }];
 }
 
 // Đổi tin nhắn kiểu OpenAI sang yêu cầu streamGenerateContent của Google: system → systemInstruction, assistant → model,
