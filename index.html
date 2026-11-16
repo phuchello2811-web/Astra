@@ -1981,101 +1981,43 @@
   }
 
   const REVIEW_PROMPT =
-    "Hãy tự phản biện câu trả lời vừa rồi như giám khảo khắt khe: (1) đối chiếu từng yêu cầu và điều kiện ngầm; " +
-    "(2) soi giả định, nhảy cóc, lỗi lệch một (off-by-one), chia cho 0, điều kiện biên; " +
-    "(3) kiểm chứng lại đáp số bằng hướng độc lập hoặc chạy code bằng công cụ nếu chưa chạy. " +
-    "Viết lại câu trả lời cuối hoàn chỉnh như thể trả lời lần đầu, không nhắc tới việc kiểm tra, đúng ngôn ngữ người dùng.";
+    "Kiểm tra lại câu trả lời vừa rồi:\n" +
+    "- Đã đúng và đủ yêu cầu của đề chưa?\n" +
+    "- Phép tính, code, các trường hợp biên có sai không? Thử lại bằng công cụ nếu cần.\n" +
+    "Viết lại câu trả lời cuối hoàn chỉnh như lần đầu, không nhắc tới việc kiểm tra.";
   const ANALYZE_PROMPT =
-    "(Bước phân tích: CHƯA giải và CHƯA tính đáp số. Nêu ngắn bằng gạch đầu dòng: " +
-    "1) mục tiêu chính xác; 2) dữ kiện cứng, ẩn số, ràng buộc, đơn vị, điều kiện ngầm; " +
-    "3) chữ bẫy (không, duy nhất, ít nhất, tối đa, > vs ≥, 0-index vs 1-index), các cách hiểu khác; " +
-    "4) dạng bài, bất biến cốt lõi, định lý hoặc thuật toán; 5) kế hoạch ≥ 2 hướng độc lập; " +
-    "6) các case biên (0, 1, âm, rỗng, cực đại) và phép kiểm chứng bác bỏ đáp án sai bằng code/tra cứu.)";
+    "(Chưa giải. Phân tích đề ngắn gọn:\n" +
+    "1) Đề hỏi gì, có dữ kiện và ràng buộc nào?\n" +
+    "2) Có chữ bẫy hoặc cách hiểu khác không?\n" +
+    "3) Dạng bài và hướng giải.\n" +
+    "4) Các trường hợp biên cần thử.)";
   const ANALYSIS_NOTE = "(Bản phân tích tham khảo; nếu sai thì tự sửa:\n<phan_tich>\n{A}\n</phan_tich>\nGiải theo kế hoạch, thử đủ case biên và kiểm chứng bằng công cụ.)";
   const DEEP_ANGLES = [
-    "(Giải độc lập từ đầu theo hướng KHÁC lối mòn — quy từ nguyên lý gốc hoặc tính/vét cạn bằng công cụ — và thử phá đáp án bằng case biên trước khi kết luận.)",
-    "(Giải độc lập như người phản biện khó tính: soi từng chữ tìm bẫy, giả định ngầm, tìm phản ví dụ cho hướng trực giác nhất rồi mới kiểm chứng bằng code/tra cứu.)",
-    "(Giải độc lập chặt chẽ nhất: ký hiệu tường minh, giữ bất biến ở mọi bước, xét đủ nhánh phân trường hợp, rồi kiểm chứng độc lập bằng code/tra cứu.)",
+    "(Giải độc lập từ đầu theo một hướng khác lối mòn, rồi thử các trường hợp biên trước khi kết luận.)",
+    "(Giải độc lập, soi kỹ từng chữ của đề để tìm bẫy, rồi kiểm chứng bằng code hoặc tra cứu.)",
+    "(Giải độc lập, chặt chẽ, xét đủ các trường hợp, rồi kiểm chứng bằng code hoặc tra cứu.)",
   ];
-  const DEBATE_PROMPT =
-    "(Vòng trao đổi. Bạn là lời giải {L}. Dưới đây là các lời giải vòng 1:\n\n{S}\n\n" +
-    "Hãy: 1) so sánh giả định, lập luận, đáp số cuối; chỉ rõ chỗ đồng ý và mâu thuẫn; " +
-    "2) mọi điểm mâu thuẫn (hoặc nhảy cóc chung) phải kiểm bằng bằng chứng cứng (chạy code, vét cạn, phản ví dụ, tra cứu) — KHÔNG theo số đông khi chưa kiểm; " +
-    "3) tiếp thu ý hay, sửa sai chính mình; 4) viết lại LỜI GIẢI HOÀN CHỈNH đã cải tiến; code phải đã chạy thử.)";
-  const CONSENSUS_PROMPT = "(So sánh, không giải lại:\n\n{S}\n\nChuẩn hoá dạng thức, đơn vị và kiểm tra giả định ngầm. Dòng cuối ghi đúng 1 trong 2: ĐỒNG THUẬN, hoặc BẤT ĐỒNG: <liệt kê từng điểm>.)";
-  const DEBATE2_PROMPT = "(Vòng trao đổi 2. Bạn là {L}. Vòng trước:\n\n{S}\n\nBất đồng:\n{D}\n\nThiết kế phép thử quyết định (code, phản ví dụ, số nhỏ, tra cứu) cho đúng điểm bất đồng, thừa nhận nếu sai, rồi viết lại LỜI GIẢI HOÀN CHỈNH.)";
-  // ---------- Mức Ultra cho việc xây dựng phần mềm: làm như một lập trình viên chuyên nghiệp ----------
-  // Yêu cầu làm web, app, game, công cụ… (không phải câu hỏi hay bài lập trình thi đấu).
-  const BUILD_RE = /(làm|tạo|viết|xây dựng|xây|code|lập trình|thiết kế|phát triển|dựng|build|make|create|develop|implement)\s.{0,60}(web|website|trang|app|ứng dụng|game|trò chơi|tool|công cụ|phần mềm|hệ thống|chương trình|bot|api|server|backend|extension|tiện ích|dự án|project|dashboard|landing|portfolio|cửa hàng|shop|quản lý|cli)/i;
-  const isDevTask = (chat) => {
-    const q = chat.messages.filter((m) => m.role === "user").at(-1)?.content || "";
-    return BUILD_RE.test(q) && !activeSkills(chat, true).some((k) => k.id === "ioi");
-  };
-  const PLAN_PROMPT =
-    "(Bước lên kế hoạch. CHƯA viết code. Hãy làm như một kỹ sư phần mềm cấp cao: viết bản kế hoạch dạng Markdown, ngắn gọn mà cụ thể, gồm:\n" +
-    "# <tên dự án>\n" +
-    "## Mục tiêu: sản phẩm dùng cho ai, giải quyết việc gì, thế nào là thành công.\n" +
-    "## Yêu cầu: tính năng chính (đầy đủ như sản phẩm thật, không chỉ bản demo), yêu cầu phi chức năng (giao diện, responsive, hiệu năng, trợ năng, bảo mật), " +
-    "ràng buộc; chỗ đề chưa rõ thì ghi giả định hợp lý.\n" +
-    "## Công nghệ: chọn gì và vì sao (ưu tiên chạy được ngay trong trình duyệt: HTML, CSS, JS thuần, thư viện qua CDN có phiên bản).\n" +
-    "## Kiến trúc: các thành phần (state, lớp dữ liệu hoặc API, giao diện, điều hướng, tiện ích), luồng dữ liệu, mô hình dữ liệu (các trường, kiểu).\n" +
-    "## Cấu trúc thư mục: cây file và vai trò từng file.\n" +
-    "## Kế hoạch theo giai đoạn: 2 đến 4 giai đoạn, mỗi giai đoạn một mục `### Giai đoạn N: <tên>` gồm các việc, các file tạo hoặc sửa, " +
-    "và tiêu chí hoàn thành kiểm tra được. Giai đoạn 1 dựng khung chạy được (cấu trúc, giao diện cơ bản, dữ liệu mẫu); các giai đoạn sau thêm tính năng; " +
-    "giai đoạn cuối hoàn thiện (trạng thái trống, lỗi, đang tải, chế độ tối, responsive, trợ năng, README). Việc nhỏ thì 1 đến 2 giai đoạn.\n" +
-    "## Kiểm thử: cách kiểm từng tính năng và các trường hợp biên.\n" +
-    "## Rủi ro: chỗ dễ sai và cách phòng.)";
-  const PLAN_REVIEW_PROMPT =
-    "Hãy phản biện bản kế hoạch phần mềm vừa rồi như một kỹ sư trưởng: thiếu tính năng nào mà người dùng chắc chắn cần, kiến trúc có chỗ nào dễ gây lỗi " +
-    "hoặc khó mở rộng, mô hình dữ liệu có thiếu trường không, chia giai đoạn có hợp lý không, kiểm thử có bỏ sót trường hợp biên quan trọng không. " +
-    "Không viết code, không viết lại kế hoạch. Liệt kê ngắn từng góp ý cụ thể. Nếu kế hoạch đã tốt thì chỉ ghi: KHÔNG CÓ LỖI.";
-  const PLAN_FIX_PROMPT =
-    "Góp ý của kỹ sư trưởng cho bản kế hoạch:\n\n<gop_y>\n{C}\n</gop_y>\n\n" +
-    "Cân nhắc từng góp ý (không bắt buộc theo nếu không hợp lý) rồi viết lại TRỌN bản kế hoạch Markdown đã cải tiến, cùng cấu trúc các mục. Chưa viết code.";
-  const PHASE_PROMPT =
-    "Kế hoạch của dự án:\n\n<ke_hoach>\n{P}\n</ke_hoach>\n\n{F}" +
-    "Bây giờ thực hiện **Giai đoạn {N}/{T}: {G}**. Viết code thật, chạy được, chất lượng như sản phẩm thật:\n" +
-    "- Mỗi file một khối code có đường dẫn ở dòng mở khối (ví dụ ```js js/app.js); viết TRỌN mỗi file tạo mới hoặc thay đổi trong giai đoạn này " +
-    "(file đã có mà sửa thì viết lại trọn file đó); file không đổi thì không viết lại.\n" +
-    "- Giữ đúng kiến trúc, tên file, tên hàm, id, class, mô hình dữ liệu trong kế hoạch và trong các file đã có.\n" +
-    "- Logic phức tạp (tính toán, xử lý dữ liệu, luật chơi) thì chạy thử bằng js-run hoặc py-run trước khi đưa vào file.\n" +
-    "- Không để TODO, chức năng giả hay nút không làm gì cho phần thuộc giai đoạn này.\n" +
-    "Cuối cùng ghi ngắn: đã làm gì, đã đạt tiêu chí hoàn thành chưa.";
-  const PHASE_FIX_PROMPT =
-    "Chạy thử tự động sau giai đoạn vừa rồi (khung điện thoại 390px, bấm thử mọi nút) gặp lỗi:\n{E}\n\n" +
-    "Tìm đúng nguyên nhân và sửa. Chỉ viết lại TRỌN những file cần sửa, mỗi file một khối code có đường dẫn ở dòng mở khối.";
-  const CODE_REVIEW_PROMPT =
-    "Hãy rà soát (code review) toàn bộ dự án trên như một kỹ sư cấp cao khó tính. KHÔNG viết lại code. Kiểm tra:\n" +
-    "1) Đúng và đủ: mọi tính năng trong kế hoạch và yêu cầu ban đầu đã có và chạy thật chưa; luồng dữ liệu, state, sự kiện có lỗi logic không.\n" +
-    "2) Lỗi tiềm ẩn: biến hoặc phần tử không tồn tại, id/class không khớp giữa HTML, CSS, JS, đường dẫn file sai, thứ tự nạp script, " +
-    "lỗi bất đồng bộ, trường hợp biên (dữ liệu rỗng, rất dài, ký tự đặc biệt, bấm liên tục), localStorage hỏng dữ liệu.\n" +
-    "3) Bảo mật: chèn HTML từ dữ liệu người dùng (XSS), lộ bí mật. 4) Giao diện: responsive, chế độ tối, trợ năng, trạng thái trống, lỗi, đang tải.\n" +
-    "5) Chất lượng code: trùng lặp, hàm quá dài, tên khó hiểu.\n" +
-    "Liệt kê từng vấn đề kèm file, vị trí, mức độ (nghiêm trọng hoặc nhỏ) và cách sửa. Nếu đã soát kỹ mà không thấy lỗi thì chỉ ghi: KHÔNG CÓ LỖI.";
-  const CODE_FIX_PROMPT =
-    "Kết quả rà soát code của các kỹ sư khác (họ cũng có thể sai, hãy tự kiểm chứng từng ý):\n\n{C}\n\n" +
-    "Sửa các vấn đề có thật. Chỉ viết lại TRỌN những file cần sửa, mỗi file một khối code có đường dẫn ở dòng mở khối; cuối cùng ghi ngắn đã sửa gì.";
-  const TEST_PROMPT =
-    "Hãy kiểm thử dự án trên như một kỹ sư QA: viết và chạy kiểm thử cho các hàm và luồng quan trọng bằng js-run, py-run hoặc cpp-run " +
-    "(trường hợp bình thường, biên, sai đầu vào). Kiểm thử nào sai thì sửa code rồi chạy lại. Cuối cùng chỉ viết lại TRỌN những file đã sửa " +
-    "(mỗi file một khối có đường dẫn) và một danh sách ngắn các kiểm thử đã chạy cùng kết quả.";
-  const DEV_SUMMARY_PROMPT =
-    "Dựa vào kế hoạch và các file trên, viết phần mở đầu ngắn cho câu trả lời gửi người dùng (KHÔNG viết code, không chép lại file): " +
-    "một câu giới thiệu sản phẩm, danh sách tính năng chính, cách chạy (mở index.html hoặc lệnh chạy) và cách đưa lên mạng, " +
-    "những gì đã được kiểm tra. Dùng Markdown, ngắn gọn.";
   const CRITIC_PROMPT =
-    "Đóng vai người chấm bài nghiêm khắc, KHÔNG viết lại lời giải. Kiểm tra: " +
-    "1) đối chiếu yêu cầu, ràng buộc, đơn vị, chữ bẫy; 2) từng bước suy luận, giả định ngầm, dấu bất đẳng thức và biên (0, âm, rỗng, cực đại); " +
-    "3) kiểm chứng phép tính và code bằng công cụ (C++ chạy chính code đó bằng cpp-run so với vét cạn); 4) tìm ít nhất 1 phản ví dụ hoặc cách hiểu khác. " +
-    "Chỉ ghi KHÔNG CÓ LỖI sau khi mọi phép kiểm đạt; nếu còn lỗi thì nêu vị trí, mức độ và cách sửa.";
-  const FIX_PROMPT = "Nhận xét của người chấm:\n\n<nhan_xet>\n{C}\n</nhan_xet>\n\nTự kiểm chứng từng ý rồi sửa đúng chỗ sai; viết câu trả lời cuối hoàn chỉnh như lần đầu, không nhắc người chấm.";
-  const CROSS_PROMPT = "(Kiểm tra chéo các lời giải độc lập:\n\n{S}\n\nSoi từng lời giải bằng chạy code, thử biên, phản ví dụ, bắt lỗi giả định ngầm; chốt đáp án đúng kèm bằng chứng và chỉ rõ lời giải nào sai ở đâu.)";
+    "Đóng vai người chấm bài, KHÔNG viết lại lời giải. Kiểm tra:\n" +
+    "1) Có đúng yêu cầu của đề không?\n" +
+    "2) Từng bước suy luận và phép tính có sai không?\n" +
+    "3) Các trường hợp biên (0, âm, rỗng, lớn nhất) có đúng không? Dùng công cụ nếu cần.\n" +
+    "Đúng hết thì chỉ ghi KHÔNG CÓ LỖI; sai thì nêu chỗ sai và cách sửa.";
+  const FIX_PROMPT = "Nhận xét của người chấm:\n\n<nhan_xet>\n{C}\n</nhan_xet>\n\nKiểm tra lại từng ý, sửa chỗ sai rồi viết câu trả lời cuối hoàn chỉnh như lần đầu, không nhắc người chấm.";
+  const CROSS_PROMPT =
+    "(Kiểm tra các lời giải độc lập:\n\n{S}\n\n" +
+    "So sánh đáp án, thử lại chỗ khác nhau bằng code hoặc ví dụ nhỏ, " +
+    "rồi chốt đáp án đúng và nói lời giải nào sai ở đâu.)";
   const REVIEW_MULTI_PROMPT =
     "Dưới đây là {N} lời giải khác (của bạn là A):\n\n{B}\n\nKiểm tra chéo:\n\n{K}\n\n" +
-    "Làm giám khảo nghiêm khắc: 1) tóm tắt đáp án và giả định chính; 2) tự kiểm chứng chỗ khác nhau bằng bằng chứng (không theo số đông); " +
-    "3) kể cả khi giống nhau vẫn kiểm lại bằng cách độc lập tránh lỗi tập thể; 4) gộp phần hay nhất (code cuối phải đúng là code đã chạy thử qua công cụ). " +
-    "Viết câu trả lời cuối hoàn chỉnh cho câu hỏi ban đầu như lần đầu, không nhắc A, B, C.";
-  const FINAL_CHECK_PROMPT = "Kiểm tra lần cuối độc lập: đối chiếu đề, kiểm số liệu bằng code, chạy thử chính code (C++ dùng cpp-run) trên ví dụ đề, test ngẫu nhiên so với vét cạn và case biên. KHÔNG viết lại câu trả lời. Chỉ ghi KHÔNG CÓ LỖI nếu đạt hết; còn lỗi thì liệt kê cách sửa.";
+    "So sánh các lời giải, tự kiểm lại chỗ khác nhau (không theo số đông). " +
+    "Viết câu trả lời cuối hoàn chỉnh như lần đầu, không nhắc A, B, C.";
+  const FINAL_CHECK_PROMPT =
+    "Kiểm tra lại lần cuối, KHÔNG viết lại câu trả lời:\n" +
+    "1) Đối chiếu với đề.\n" +
+    "2) Kiểm lại số liệu và code bằng công cụ.\n" +
+    "3) Thử các trường hợp biên.\n" +
+    "Đúng hết thì chỉ ghi KHÔNG CÓ LỖI; sai thì nêu chỗ sai và cách sửa.";
   // Người chấm kết luận không có lỗi (chỉ tin khi không kèm lỗi nghiêm trọng nào).
   const noErrors = (t) => /KHÔNG CÓ LỖI/.test(t) && !/nghiêm trọng|cần sửa|bị sai|sai ở/i.test(t);
   // Thêm lời dặn vào cuối câu hỏi gần nhất (bản sao, không đổi lịch sử chat).
@@ -2772,10 +2714,13 @@
     if (extra.kb.length) reply.kb = extra.kb;
     history.unshift({ role: "system", content: systemPrompt(chat) + extra.text });
     // Mô hình làm theo lời dặn ngay trong câu hỏi tốt hơn lời dặn chung, nên nhắc ngắn kỹ năng đang dùng (người dùng không thấy).
-    const reminds = [currentMode().remind, ...activeSkills(chat, true).map((k) => k.remind)].filter(Boolean);
+    // Nhanh và Cân bằng (medium): gửi gọn, không thêm lời dặn về kỹ năng hay độ khó (chỉ giữ lời nhắc sửa ảnh vì thiếu nó công cụ ảnh không chạy đúng).
+    const lean = settings.level === "fast" || settings.level === "normal";
+    const reminds = lean ? [] : [currentMode().remind, ...activeSkills(chat, true).map((k) => k.remind)].filter(Boolean);
     // Độ khó của câu hỏi quyết định độ sâu suy nghĩ: câu khó thì nghĩ đủ khung và kiểm chứng; câu xã giao ngắn thì trả lời ngay.
     const lastQ = chat.messages.filter((m) => m.role === "user").at(-1)?.content || "";
-    if (activeSkills(chat, true).some((k) => k.hard))
+    if (lean) { /* không thêm lời dặn */ }
+    else if (activeSkills(chat, true).some((k) => k.hard))
       reminds.push("đây là câu khó: suy nghĩ theo khung đầy đủ (hiểu đề, bẫy, ít nhất hai cách, đối chiếu), kiểm chứng bằng công cụ trước khi chốt, nêu mức chắc chắn");
     else if (lastQ.length < 40 && !/[?？]|\d/.test(lastQ) && /^(chào|hi|hello|xin chào|cảm ơn|cám ơn|ok|oke|thanks|thank you|tạm biệt|bye)\b/i.test(lastQ.trim()))
       reminds.push("câu xã giao ngắn: trả lời ngay, tự nhiên, không suy nghĩ dài");
@@ -2791,7 +2736,7 @@
     setBusy(true);
     const level = settings.level;
     const hardTask = activeSkills(chat, true).some((k) => k.hard);
-    if (hardTask) reply.hard = true;
+    if (hardTask && !lean) reply.hard = true;
     // Ghi chép của các bước (phân tích, lời giải nháp, nhận xét) hiện bên trên câu trả lời cuối.
     const notes = [];
     const step = (text, notice) => { reply.stage = text; reply.notice = notice; paintAssistant(node, reply, true); };
@@ -2809,115 +2754,15 @@
       Object.assign(reply, { content: n.content, reasoning: n.reasoning, thinkSecs: n.thinkSecs, review: false, via: undefined });
     };
     const title = (m) => modelTitle("shared", m);
-    // Mức Ultra cho việc xây dựng phần mềm: kế hoạch Markdown → phản biện kế hoạch → code theo từng giai đoạn (chạy thử và sửa sau mỗi giai đoạn)
-    // → các mô hình khác rà soát code → sửa → chạy thử toàn bộ hoặc kiểm thử → tổng hợp. Kết quả cuối có đủ mọi file (kèm PLAN.md).
-    const devRun = async (helpers) => {
-      const T = 7;
-      reply.noGaps = true; // file của giai đoạn sau chưa viết là đúng kế hoạch, không tự viết bù
-      const answerOf = () => splitThink(reply.content).answer.trim();
-      const run = async (msgs) => { await answerWithTools(msgs, reply, node); await ensureAnswer(msgs, reply, node); return answerOf(); };
-      const files = new Map();
-      const absorb = (text) => {
-        const named = filesIn(text);
-        for (const [p, c] of named) files.set(p, c);
-        // Trang HTML viết không kèm tên file: coi là index.html.
-        if (!named.some(([p]) => /\.html?$/i.test(p))) {
-          const page = [...text.matchAll(/^[ \t]*```html[ \t]*\n([\s\S]*?)\n[ \t]*```/gm)].map((m) => m[1]).filter((c) => /<(html|body)\b/i.test(c)).at(-1);
-          if (page) files.set("index.html", page);
-        }
-      };
-      const ctxNow = (plan) => [...history, { role: "assistant", content: `Kế hoạch:\n\n${plan.slice(0, 12000)}\n\nMã nguồn hiện tại:\n\n${projectDump(files).slice(0, 80000)}` }];
-      // Bước 1: kế hoạch.
-      step(`Bước 1/${T}: phân tích yêu cầu và lên kế hoạch (Markdown)`, "Đang lên kế hoạch…");
-      let plan = await run(withNote(history, PLAN_PROMPT));
-      shelve("Kế hoạch (PLAN.md)");
-      // Bước 2: kỹ sư khác phản biện kế hoạch, rồi cải tiến.
-      if (plan && helpers[0]) {
-        step(`Bước 2/${T}: ${title(helpers[0])} phản biện kế hoạch`, "Kỹ sư trưởng đang phản biện kế hoạch…");
-        const st = [];
-        const [c] = await gather([silentRun([...history, { role: "assistant", content: plan }, { role: "user", content: PLAN_REVIEW_PROMPT }], helpers[0], st)], st, 120000);
-        keep(c, "Phản biện kế hoạch");
-        if (c && !noErrors(c.answer)) {
-          step(`Bước 2/${T}: cải tiến kế hoạch theo góp ý`, undefined);
-          const better = await run([...history, { role: "assistant", content: plan }, { role: "user", content: PLAN_FIX_PROMPT.replace("{C}", c.answer.slice(0, 6000)) }]);
-          if (better.length > plan.length * 0.5) plan = better;
-          shelve("Kế hoạch đã cải tiến");
-        }
-      }
-      // Bước 3: code theo từng giai đoạn; sau mỗi giai đoạn chạy thử (web) và sửa lỗi ngay.
-      const phases = [...plan.matchAll(/^#{2,4}\s*Giai đoạn\s*(\d+)\s*[:.\-–—]?\s*(.*)$/gim)].map((m) => m[2].replace(/[*_`]/g, "").trim() || `Giai đoạn ${m[1]}`).slice(0, 5);
-      if (!phases.length) phases.push("Toàn bộ dự án");
-      for (let i = 0; i < phases.length; i++) {
-        step(`Bước 3/${T}: giai đoạn ${i + 1}/${phases.length}: ${phases[i]}`, undefined);
-        const prompt = PHASE_PROMPT.replace("{P}", plan.slice(0, 20000))
-          .replace("{F}", files.size ? `Các file đã có sau các giai đoạn trước:\n\n${projectDump(files).slice(0, 70000)}\n\n` : "")
-          .replace("{N}", i + 1).replace("{T}", phases.length).replace("{G}", phases[i]);
-        absorb(await run(withNote(history, prompt)));
-        shelve(`Giai đoạn ${i + 1}: ${phases[i]}`);
-        if ([...files.keys()].some((p) => /\.html?$/i.test(p))) {
-          // Chỉ xét lỗi khi chạy; file của các giai đoạn sau chưa có là bình thường.
-          const errs = (await checkProject(files)).filter((e) => !/dự án không có file|Không tải được/.test(e));
-          if (errs.length) {
-            step(`Bước 3/${T}: sửa lỗi chạy thử của giai đoạn ${i + 1}`, undefined);
-            absorb(await run([...ctxNow(plan), { role: "user", content: PHASE_FIX_PROMPT.replace("{E}", errs.map((x) => "- " + x).join("\n")) }]));
-            shelve(`Sửa lỗi giai đoạn ${i + 1}`);
-          }
-        }
-      }
-      if (!files.size) {
-        // Mô hình không viết file nào: lấy kết quả của giai đoạn cuối làm câu trả lời.
-        const last = notes.findLast((n) => /^Giai đoạn|^Sửa lỗi/.test(n.label));
-        if (last) restore(last);
-        delete reply.noGaps;
-        return;
-      }
-      // Bước 4–5: các mô hình khác rà soát code; có vấn đề thì sửa.
-      const reviewers = helpers.slice(0, 2).length ? helpers.slice(0, 2) : [cloudModel()], rst = [];
-      step(`Bước 4/${T}: ${reviewers.map(title).join(", ")} rà soát code`, "Đang rà soát code…");
-      const crits = (await gather(reviewers.map((m) => silentRun([...ctxNow(plan), { role: "user", content: CODE_REVIEW_PROMPT }], m, rst)), rst, 180000)).filter(Boolean);
-      crits.forEach((c) => keep(c, "Rà soát code"));
-      const problems = crits.filter((c) => !noErrors(c.answer));
-      if (problems.length) {
-        step(`Bước 5/${T}: sửa theo kết quả rà soát`, undefined);
-        absorb(await run([...ctxNow(plan), { role: "user", content: CODE_FIX_PROMPT.replace("{C}",
-          problems.map((c, i) => `<ra_soat_${i + 1} mo_hinh="${c.draft.model}">\n${c.answer.slice(0, 6000)}\n</ra_soat_${i + 1}>`).join("\n\n")) }]));
-        shelve("Sửa theo rà soát");
-      }
-      // Bước 6: trang web thì chạy thử mọi trang và sửa (tối đa 2 lượt); code khác thì viết và chạy kiểm thử.
-      if ([...files.keys()].some((p) => /\.html?$/i.test(p))) {
-        for (let r = 0; r < 2; r++) {
-          step(`Bước 6/${T}: chạy thử toàn bộ${r ? " (lượt 2)" : ""}`, "Đang chạy thử mọi trang…");
-          const errs = await checkProject(files);
-          if (!errs.length) break;
-          step(`Bước 6/${T}: sửa lỗi khi chạy thử${r ? " (lượt 2)" : ""}`, undefined);
-          absorb(await run([...ctxNow(plan), { role: "user", content: PROJECT_FIX_PROMPT.replace("{E}", errs.map((x) => "- " + x).join("\n")) }]));
-          shelve(`Sửa lỗi chạy thử${r ? " (lượt 2)" : ""}`);
-        }
-      } else {
-        step(`Bước 6/${T}: kiểm thử`, undefined);
-        absorb(await run([...ctxNow(plan), { role: "user", content: TEST_PROMPT }]));
-        shelve("Kiểm thử");
-      }
-      // Bước 7: tổng hợp câu trả lời: phần mở đầu ngắn rồi mọi file của dự án.
-      step(`Bước 7/${T}: tổng hợp`, "Đang viết phần tóm tắt…");
-      const sst = [];
-      const [s] = await gather([silentRun([...ctxNow(plan), { role: "user", content: DEV_SUMMARY_PROMPT }], cloudModel(), sst, true)], sst, 90000);
-      if (plan) files.set("PLAN.md", plan);
-      Object.assign(reply, { content: (s?.answer.trim() || "Dự án đã hoàn thành theo kế hoạch, đủ các file bên dưới.") + "\n\n" + projectDump(files),
-        reasoning: "", review: false, via: undefined });
-      delete reply.noGaps;
-    };
     try {
       if (isAtlas6(cloudModel())) {
         // Không chạy quy trình nhiều bước: mỗi bước là một prompt sẵn. Chỉ một lượt, payload đã lọc ở withProfile.
         await answerWithTools(history, reply, node);
       } else {
       const deep = level === "careful" || level === "max" || level === "ultra";
-      const total = { careful: 4, max: 5, ultra: 8 }[level];
-      const helpers = deep ? await councilModels({ careful: 1, max: 2, ultra: 3 }[level]) : [];
-      // Ultra với yêu cầu xây dựng phần mềm: quy trình của lập trình viên chuyên nghiệp (devRun).
-      if (level === "ultra" && isDevTask(chat)) await devRun(helpers);
-      else {
+      const total = { careful: 4, max: 5, ultra: 5 }[level];
+      const helpers = deep ? await councilModels({ careful: 1, max: 2, ultra: 2 }[level]) : [];
+      {
         let base = history;
         // Bước 1: phân tích đề (chưa giải), để bước giải đi đúng hướng và biết cách kiểm chứng.
         if (deep) {
@@ -2928,36 +2773,46 @@
         }
         // Bước 2: giải. Mức Tối đa: hai mô hình khác giải song song (không hiện ra), mỗi mô hình một góc nhìn.
         const solverStops = [], solverStart = Date.now();
-        const solvers = level === "max" || level === "ultra" ? helpers.map((m, i) => silentRun(withNote(base, DEEP_ANGLES[i]), m, solverStops)) : [];
+        const solvers = level === "max" ? helpers.map((m, i) => silentRun(withNote(base, DEEP_ANGLES[i]), m, solverStops)) : [];
         solvers.forEach((p) => p.catch(() => {}));
-        if (deep) step(level === "ultra" ? `Bước 2/8: vòng 1, ${[cloudModel(), ...helpers].map(title).join(", ")} giải độc lập`
-          : level === "max" ? `Bước 2/5: ${[cloudModel(), ...helpers].map(title).join(", ")} giải song song` : "Bước 2/4: giải theo kế hoạch", undefined);
+        if (deep) step(level === "max" ? `Bước 2/5: ${[cloudModel(), ...helpers].map(title).join(", ")} giải song song` : `Bước 2/${total}: giải theo kế hoạch`, undefined);
         await answerWithTools(base, reply, node);
         await ensureAnswer(base, reply, node);
         const draft = splitThink(reply.content).answer.trim();
 
-        // Mức Cân bằng: mô hình GLM nhóm nhanh (Z.ai, không gồm Titan 4 Mega) tự chấm lại một lượt với câu khó (toán, logic, lập trình thi đấu), câu hỏi lập trình và câu cần lập luận
-        // (trừ trang web: đã có bước tự chạy thử và sửa lỗi).
-        const skillsNow = activeSkills(chat);
-        const fastGlm = /^glm/.test(cloudModel()) && !PROVIDERS.shared.nvidia.includes(cloudModel());
-        if (draft && level === "normal" && !skillsNow.some((k) => k.id === "web" || k.id === "project") &&
-          ((hardTask && !QUOTA_LIMITED.includes(cloudModel())) || (fastGlm && (skillsNow.some((k) => k.id === "code" || k.id === "reason") || draft.length > 1500)))) {
-          reply.fallback = shelve("Bản nháp đầu tiên");
-          await judge([...history, { role: "assistant", content: draft }, { role: "user", content: REVIEW_PROMPT }], reply, node);
-        }
+        // Nhanh và Cân bằng: trả lời một lượt, không tự chấm lại.
 
         // Mức Kỹ: một mô hình khác soát lỗi (không viết lại), rồi mô hình chính sửa và viết câu trả lời cuối.
-        if (draft && level === "careful") {
+        // Mức Ultra: làm y như Kỹ, rồi kiểm tra lại thêm một lần ở cuối.
+        if (draft && (level === "careful" || level === "ultra")) {
           const main = (reply.fallback = shelve("Lời giải nháp"));
           const critic = helpers[0] || cloudModel(), stops = [];
-          step(`Bước 3/4: ${title(critic)} soát lỗi từng bước`, "Người chấm đang kiểm tra…");
+          step(`Bước 3/${total}: ${title(critic)} soát lỗi từng bước`, "Người chấm đang kiểm tra…");
           const [c] = await gather([silentRun([...history, { role: "assistant", content: draft.slice(0, 12000) }, { role: "user", content: CRITIC_PROMPT }], critic, stops)], stops, 120000);
           keep(c, "Nhận xét của người chấm");
           if (c && noErrors(c.answer)) restore(main);
           else {
-            step("Bước 4/4: sửa lỗi và viết câu trả lời cuối", undefined);
+            step(`Bước 4/${total}: sửa lỗi và viết câu trả lời cuối`, undefined);
             await judge([...history, { role: "assistant", content: draft.slice(0, 12000) },
               { role: "user", content: c ? FIX_PROMPT.replace("{C}", c.answer.slice(0, 6000)) : REVIEW_PROMPT }], reply, node);
+          }
+          // Ultra: kiểm tra lại độc lập thêm một lần; còn lỗi thì sửa.
+          if (level === "ultra") {
+            const current = splitThink(reply.content).answer.trim();
+            if (current && !reply.judgeFailed) {
+              const before = shelve("Câu trả lời trước khi kiểm tra lại");
+              const checker = helpers[1] || helpers[0] || cloudModel(), fst = [];
+              step(`Bước 5/${total}: ${title(checker)} kiểm tra lại`, "Đang kiểm tra lại…");
+              const [f] = await gather([silentRun([...history, { role: "assistant", content: current.slice(0, 12000) }, { role: "user", content: FINAL_CHECK_PROMPT }], checker, fst)], fst, 120000);
+              keep(f, "Kiểm tra lại");
+              if (!f || noErrors(f.answer)) restore(before);
+              else {
+                reply.fallback = before;
+                step(`Bước 5/${total}: sửa lỗi sau khi kiểm tra lại`, undefined);
+                await judge([...history, { role: "assistant", content: current.slice(0, 12000) },
+                  { role: "user", content: FIX_PROMPT.replace("{C}", f.answer.slice(0, 6000)) }], reply, node);
+              }
+            }
           }
         }
 
@@ -2998,79 +2853,6 @@
             }
           }
         }
-
-        // Mức Ultra: vòng 1 giải độc lập; vòng 2 trao đổi suy luận và sửa cho nhau; kiểm tra đồng thuận, còn bất đồng thì thêm vòng 3;
-        // giám khảo tổng hợp; các mô hình khác kiểm tra chéo; giám khảo tinh chỉnh; kiểm tra lần cuối (sửa xong thì kiểm lại thêm một lần).
-        if (draft && level === "ultra") {
-          const tag = (t, i, model, text) => `<${t}_${"ABCDE"[i]} mo_hinh="${model}">\n${text}\n</${t}_${"ABCDE"[i]}>`;
-          const listOf = (arr) => arr.map((x, i) => tag("loi_giai", i, x.name, x.answer.slice(0, 5000))).join("\n\n");
-          const main = (reply.fallback = shelve("Vòng 1: lời giải 1"));
-          step("Bước 2/8: chờ các mô hình khác giải xong vòng 1", "Đang chờ các mô hình khác giải xong…");
-          const r1 = await gather(solvers, solverStops, Math.max(60000, 210000 - (Date.now() - solverStart)));
-          let team = [{ model: cloudModel(), name: main.model, answer: draft }];
-          r1.forEach((o, i) => { if (o) { keep(o, `Vòng 1: lời giải ${team.length + 1}`); team.push({ model: helpers[i], name: o.draft.model, answer: o.answer }); } });
-          // Bước 3: trao đổi. Mỗi mô hình đọc lời giải của cả nhóm, kiểm chứng chỗ mâu thuẫn và viết lại lời giải đã cải tiến.
-          const roundOf = async (prompt, label, ms) => {
-            const st = [];
-            const res = await gather(team.map((x, i) => silentRun(withNote(base, prompt.replace("{L}", "ABCDE"[i])), x.model, st)), st, ms);
-            res.forEach((o, i) => { if (o) keep(o, `${label}: lời giải ${i + 1}`); });
-            team = team.map((x, i) => (res[i] ? { model: x.model, name: res[i].draft.model, answer: res[i].answer } : x));
-          };
-          step(`Bước 3/8: ${team.map((x) => title(x.model)).join(", ")} trao đổi suy luận và sửa lời giải`, "Các mô hình đang trao đổi và sửa lời giải cho nhau…");
-          await roundOf(DEBATE_PROMPT.replace("{S}", listOf(team)), "Vòng 2 sau trao đổi", 180000);
-          // Bước 4: so sánh kết luận; còn bất đồng thì thêm vòng 3 chỉ bàn về chỗ bất đồng.
-          if (team.length > 1) {
-            step("Bước 4/8: kiểm tra các mô hình đã thống nhất chưa", "Đang so sánh kết luận của các mô hình…");
-            const cst = [];
-            const [cons] = await gather([silentRun(withNote(history, CONSENSUS_PROMPT.replace("{S}", listOf(team))), cloudModel(), cst, true)], cst, 60000);
-            keep(cons, "So sánh kết luận");
-            const split = cons?.answer.match(/BẤT ĐỒNG\s*:?([\s\S]*)$/);
-            if (split) {
-              step("Bước 4/8: vòng 3, trao đổi tiếp về chỗ còn bất đồng", "Các mô hình đang tranh luận về chỗ còn bất đồng…");
-              await roundOf(DEBATE2_PROMPT.replace("{S}", listOf(team)).replace("{D}", (split[1].trim() || cons.answer).slice(0, 3000)), "Vòng 3", 150000);
-            }
-          }
-          // Bước 5: giám khảo (mô hình đang chọn) tổng hợp các lời giải đã cải tiến.
-          step("Bước 5/8: giám khảo tổng hợp các lời giải", undefined);
-          const [lead, ...rest] = team;
-          const review = REVIEW_MULTI_PROMPT.replace("{N}", rest.length)
-            .replace("{B}", rest.length ? rest.map((x, i) => tag("loi_giai", i + 1, x.name, x.answer.slice(0, 5000))).join("\n\n") : "(không có)")
-            .replace("{K}", "(các lời giải trên đã được các mô hình trao đổi và sửa cho nhau qua nhiều vòng)");
-          await judge([...history, { role: "assistant", content: lead.answer.slice(0, 8000) }, { role: "user", content: review }], reply, node);
-          let current = splitThink(reply.content).answer.trim();
-          if (current && !reply.judgeFailed) {
-            // Bước 6: các mô hình khác cùng soát câu trả lời của giám khảo.
-            const synth = shelve("Câu trả lời của giám khảo trước kiểm tra chéo");
-            const checkers = helpers.length ? helpers : [cloudModel()], cstops = [];
-            step(`Bước 6/8: ${checkers.map(title).join(", ")} kiểm tra chéo câu trả lời`, "Đang kiểm tra chéo…");
-            const crits = (await gather(checkers.map((m) => silentRun([...history, { role: "assistant", content: current.slice(0, 12000) },
-              { role: "user", content: CRITIC_PROMPT }], m, cstops)), cstops, 120000)).filter(Boolean);
-            crits.forEach((c) => keep(c, "Kiểm tra chéo"));
-            const problems = crits.filter((c) => !noErrors(c.answer));
-            if (!problems.length) restore(synth);
-            else {
-              // Bước 7: giám khảo tinh chỉnh theo các nhận xét (tự kiểm chứng từng ý, vì người soát cũng có thể sai).
-              reply.fallback = synth;
-              step("Bước 7/8: giám khảo tinh chỉnh theo các nhận xét", undefined);
-              await judge([...history, { role: "assistant", content: current.slice(0, 12000) },
-                { role: "user", content: FIX_PROMPT.replace("{C}", problems.map((c, i) => tag("nhan_xet", i, c.draft.model, c.answer.slice(0, 4000))).join("\n\n")) }], reply, node);
-            }
-            // Bước 8: một mô hình khác kiểm tra lần cuối; còn lỗi thì sửa rồi kiểm lại (tối đa 2 lượt).
-            for (let pass = 0; pass < 2; pass++) {
-              current = splitThink(reply.content).answer.trim();
-              if (!current || reply.judgeFailed) break;
-              const before = shelve(pass ? "Câu trả lời sau lần sửa cuối" : "Câu trả lời trước bước kiểm tra cuối");
-              const checker = helpers[(helpers.length - 1 - pass + helpers.length) % Math.max(1, helpers.length)] || cloudModel(), fstops = [];
-              step(`Bước 8/8: ${title(checker)} kiểm tra lần cuối${pass ? " (lượt 2)" : ""}`, "Đang kiểm tra lần cuối…");
-              const [f] = await gather([silentRun([...history, { role: "assistant", content: current.slice(0, 12000) }, { role: "user", content: FINAL_CHECK_PROMPT }], checker, fstops)], fstops, 120000);
-              keep(f, pass ? "Kiểm tra lần cuối (lượt 2)" : "Kiểm tra lần cuối");
-              if (!f || noErrors(f.answer)) { restore(before); break; }
-              reply.fallback = before;
-              step(`Bước 8/8: sửa lỗi lần cuối${pass ? " (lượt 2)" : ""}`, undefined);
-              await judge([...history, { role: "assistant", content: current.slice(0, 12000) }, { role: "user", content: FIX_PROMPT.replace("{C}", f.answer.slice(0, 6000)) }], reply, node);
-            }
-          }
-        }
       }
       // Mô hình chỉ suy nghĩ mà không viết câu trả lời (hết độ dài khi đang nghĩ, hoặc máy chủ trả luồng rỗng):
       // nhờ viết lại ngay, không suy nghĩ dài; vẫn trống thì báo rõ thay vì để trống.
@@ -3082,7 +2864,7 @@
         if (!splitThink(reply.content).answer.trim()) reply.error = "Mô hình đã suy nghĩ nhưng không viết được câu trả lời (có thể đang quá tải). Bấm Tạo lại hoặc chọn mô hình khác.";
       }
       // Trang web hoàn chỉnh: tự chạy thử, có lỗi thì tự sửa (tối đa 2 lượt).
-      await autoFixWeb(history, reply, node);
+      if (!lean) await autoFixWeb(history, reply, node);
       }
     } catch (e) {
       if (e.name !== "AbortError") {
@@ -3728,7 +3510,7 @@
       await completeAnswer(history, reply, node, 0, false);
       // Chạy thử lại trang hoặc dự án đã viết nốt.
       delete reply.webCheck;
-      await autoFixWeb(history, reply, node);
+      if (settings.level !== "fast" && settings.level !== "normal") await autoFixWeb(history, reply, node);
     } catch (e) {
       if (e.name !== "AbortError") reply.error = e.message;
     } finally {
@@ -4440,7 +4222,7 @@
         messages: withProfile(messages, m), stream: true,
         temperature: Number(settings.temperature), max_tokens: MAX_OUTPUT, top_p: 0.95,
         model, ...p.extra,
-        ...((["careful", "max", "ultra"].includes(settings.level) || reply.hard) && !reply.fast ? { effort: "max" } : {}),
+        ...(!reply.fast ? { effort: ["careful", "max", "ultra"].includes(settings.level) || reply.hard ? "max" : settings.level === "normal" ? "medium" : undefined } : {}),
         level: settings.level, // chế độ đang chọn, để máy chủ biết (máy chủ không gửi trường này sang nhà cung cấp)
         ...(reply.fast || settings.level === "fast" ? { thinking: { type: "disabled" } } : {}),
       });
@@ -6760,15 +6542,13 @@ go((parseInt(location.hash.slice(1))||1)-1);setTimeout(()=>{const h=document.que
   els.form.addEventListener("submit", (e) => { e.preventDefault(); send(els.input.value); });
   els.send.addEventListener("click", (e) => { if (controller) { e.preventDefault(); controller.abort(); } });
 
-  // Mức suy nghĩ: nhanh (tắt suy nghĩ dài), cân bằng, kỹ (suy nghĩ tối đa và tự chấm lại), tối đa (3 mô hình giải song song).
+  // Mức suy nghĩ: nhanh (tắt suy nghĩ dài), cân bằng (medium), kỹ (suy nghĩ tối đa và tự chấm lại), tối đa (3 mô hình giải song song), ultra (như Kỹ + kiểm tra lại thêm một lần).
   const LEVELS = {
     fast: ["Nhanh", "Trả lời ngay, không suy nghĩ dài. Hợp chào hỏi, câu đơn giản"],
     normal: ["Cân bằng", "Suy nghĩ bình thường cho câu thường; tự tăng suy nghĩ và kiểm chứng trên bài toán, logic, thi đấu"],
     careful: ["Kỹ", "Phân tích đề → giải → mô hình khác soát lỗi → sửa. Mất khoảng 1–3 phút"],
     max: ["Tối đa", "Phân tích đề → 3 mô hình giải song song → kiểm tra chéo → tổng hợp → kiểm tra lần cuối. Mất 3–8 phút"],
-    ultra: ["Ultra", "Hết công suất: 4 mô hình giải, trao đổi suy luận nhiều vòng tới khi thống nhất → giám khảo tổng hợp → kiểm tra chéo → tinh chỉnh → kiểm tra lần cuối. " +
-      "Việc lập trình (làm web, app, game, công cụ) thì làm như lập trình viên chuyên nghiệp: kế hoạch Markdown → phản biện → code theo từng giai đoạn, chạy thử sau mỗi giai đoạn → " +
-      "rà soát code chéo → sửa → chạy thử toàn bộ. Lưu ý: chạy RẤT LÂU (khoảng 6–30 phút), chỉ dùng cho bài khó hoặc việc lớn"],
+    ultra: ["Ultra", "Như Kỹ nhưng kiểm tra lại thêm một lần ở cuối: phân tích đề → giải → mô hình khác soát lỗi → sửa → kiểm tra lại. Mất khoảng 2–5 phút"],
   };
   // Cài đặt cũ chỉ có nút Nghĩ kỹ bật/tắt: đang bật thì chuyển thành mức Tối đa.
   if ("deep" in settings) { if (settings.deep) settings.level = "max"; delete settings.deep; store.set("glm.settings", settings); }
@@ -6780,7 +6560,6 @@ go((parseInt(location.hash.slice(1))||1)-1);setTimeout(()=>{const h=document.que
     const [name, desc] = LEVELS[settings.level], i = LEVEL_KEYS.indexOf(settings.level);
     $("lpName").textContent = name;
     $("lpDesc").textContent = desc;
-    $("lpDesc").classList.toggle("warn", settings.level === "ultra"); // Ultra chạy rất lâu: mô tả màu cam để lưu ý
     $("lpInput").value = i;
     $("lpInput").setAttribute("aria-valuetext", name);
     $("lpRange").style.setProperty("--f", i / (LEVEL_KEYS.length - 1));
