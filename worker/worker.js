@@ -194,7 +194,7 @@ export default {
       top_p: clamp(body.top_p, 0.01, 1, 0.95),
       max_tokens: Math.round(clamp(body.max_tokens, 1, MAX_TOKENS, 16384)),
       thinking: { type: body.thinking?.type === "disabled" ? "disabled" : "enabled" },
-      effort: body.effort === "max" ? "max" : "high", // chế độ Nghĩ kỹ: GLM-5.3 suy nghĩ ở mức tối đa
+      effort: body.effort === "max" ? "max" : body.effort === "medium" ? "medium" : "high", // Kỹ/Tối đa/Ultra: max; Cân bằng: medium; còn lại: high (Z.ai không nhận trường này, đã bỏ ở bước gửi)
       // Chế độ người dùng chọn trên trang (Nhanh, Cân bằng, Kỹ, Tối đa, Ultra): chỉ dùng nội bộ, không gửi sang nhà cung cấp.
       level: ["fast", "normal", "careful", "max", "ultra"].includes(body.level) ? body.level : undefined,
     };

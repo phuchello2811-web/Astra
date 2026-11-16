@@ -48,7 +48,7 @@ Trang chat có tên **Astra AI**. Astra dùng máy chủ chung, dựng theo [wor
 
 Các mô hình của Astra được đặt tên theo họ: cùng gốc thì cùng tên, giữ nguyên số phiên bản, vì chúng cùng dùng cách suy nghĩ, kỹ năng, công cụ và quy trình kiểm tra chéo riêng của Astra. Khi được hỏi, Astra tự giới thiệu là Astra và tên mô hình đang chạy. Bấm nút tên mô hình trong khung chat để chọn:
 
-Nhóm **Mạnh nhất** (11 mô hình chung một nhóm; chạy trên NVIDIA, Google AI Studio và Groq, cần thêm key vào máy chủ, xem mục *Khoá API của máy chủ* bên dưới):
+Nhóm **Mạnh nhất** (12 mô hình chung một nhóm; chạy trên NVIDIA, Google AI Studio và Groq, cần thêm key vào máy chủ, xem mục *Khoá API của máy chủ* bên dưới):
 
 | Tên trong Astra | Mô hình gốc | Điểm mạnh |
 | --- | --- | --- |
@@ -56,7 +56,6 @@ Nhóm **Mạnh nhất** (11 mô hình chung một nhóm; chạy trên NVIDIA, Go
 | **Atlas 6 Omega** | Gemini 4 Hydrogen, suy nghĩ `xhigh` (Google AI Studio) | sâu nhất: bài rất khó, code lớn, nhiều bước; có thể nghĩ nhiều phút |
 | **Atlas 6 High** | Gemini 4 Hydrogen, suy nghĩ `high` | suy luận, toán, code, đọc ảnh và tài liệu dài |
 | **Atlas 6 Medium** | Gemini 4 Hydrogen, suy nghĩ `medium` | nhanh hơn, hợp câu hỏi thường, viết và tóm tắt |
-| **Titan Pro XS** | DeepSeek V4.1 Flash | suy luận sâu, lập trình, kiến trúc hệ thống và đọc ảnh |
 | **Forge X** | gpt-oss-120b (Groq) | mô hình lớn, trả lời nhanh, suy luận và viết code mạnh |
 | **Titan 3 Ultra** | Nemotron 3 Ultra | rất thông minh, suy luận, toán và code rất tốt |
 | **Titan 3.5 Vision** | Nemotron 3.5 Super VL | đọc ảnh giỏi, suy nghĩ kỹ; câu hỏi có ảnh tự gửi tới mô hình này |
@@ -87,7 +86,7 @@ Ba mô hình nhóm Nhanh và ổn định có thêm lời dặn riêng cho nhữ
 - **Studio** (làm website): luôn bật kỹ năng làm web, phát triển ứng dụng web lớn, dự án nhiều file, kiến thức web và vẽ SVG.
 - **Arena** (lập trình thi đấu): luôn bật kỹ năng IOI, lập trình và toán. Lời giải được kiểm tra bằng cpp-run, đối chiếu với lời giải trâu trước khi nộp.
 
-Danh sách trên đã được kiểm tra trả lời được ngày 13/11/2026. Titan 4 Mega được chọn làm mặc định sau bài kiểm tra 5 câu toán khó (không dùng công cụ): đúng 5/5, trung bình khoảng 27 giây mỗi câu, so với Titan 3 Ultra đúng 4/5 và chậm hơn. **Nova 5 Prime** (MiniMax M3.1 Flash, thêm ngày 14/11/2026) được chọn sau khi so với Nova 4.7 trên 3 bài toán, logic và code: đúng cả 3 (14–63 giây mỗi câu), còn Nova 4.7 có câu không trả lời sau hơn 14 phút vì Z.ai quá tải. Trên Z.ai, các mô hình mạnh hơn (GLM-4.7 bản đầy đủ, GLM-5.x) đều cần trả phí nên không dùng được. DeepSeek V4.1 Flash trên NVIDIA đang quá tải; Kimi K2.6 và Nemotron 3 Super đã bị NVIDIA gỡ khỏi bản miễn phí, nên chưa có trong menu. Khi mở menu, mỗi mô hình mạnh có nhãn **Sẵn sàng** hoặc **Đang quá tải**. Mô hình nào không trả lời trong 25 giây thì máy chủ trả lời bằng Nova 4.7, ghi lý do dưới câu trả lời, và tạm bỏ qua mô hình đó 5 phút. Riêng **Atlas 6** (cả 3 bản) được chờ tới **30 phút** (máy chủ trả lời trang ngay và gửi tín hiệu giữ kết nối mỗi 15 giây, trang hiện thời gian đã chờ; lỗi thì chuyển sang Nova ngay trong luồng đó), quá tải 503 thì không bị khoá, quá hạn chỉ tạm bỏ qua 60 giây; nhãn trong menu tự cập nhật theo câu hỏi thật vừa xong; do hạn mức gói miễn phí của Google rất thấp, trang không gọi thử nó khi kiểm tra trạng thái, không kéo nó vào giải cùng ở mức Kỹ/Tối đa/Ultra và không tự chấm lại thêm một lượt.
+Danh sách trên đã được kiểm tra trả lời được ngày 13/11/2026. Titan 4 Mega được chọn làm mặc định sau bài kiểm tra 5 câu toán khó (không dùng công cụ): đúng 5/5, trung bình khoảng 27 giây mỗi câu, so với Titan 3 Ultra đúng 4/5 và chậm hơn. **Nova 5 Prime** (MiniMax M3.1 Flash, thêm ngày 14/11/2026) được chọn sau khi so với Nova 4.7 trên 3 bài toán, logic và code: đúng cả 3 (14–63 giây mỗi câu), còn Nova 4.7 có câu không trả lời sau hơn 14 phút vì Z.ai quá tải. Trên Z.ai, các mô hình mạnh hơn (GLM-4.7 bản đầy đủ, GLM-5.x) đều cần trả phí nên không dùng được. Kimi K2.6 và Nemotron 3 Super đã bị NVIDIA gỡ khỏi bản miễn phí, nên chưa có trong menu. Khi mở menu, mỗi mô hình mạnh có nhãn **Sẵn sàng** hoặc **Đang quá tải**. Mô hình nào không trả lời trong 25 giây thì máy chủ trả lời bằng Nova 4.7, ghi lý do dưới câu trả lời, và tạm bỏ qua mô hình đó 5 phút.  Riêng **Atlas 6** (cả 3 bản) không nhận lời nhắc hệ thống, kỹ năng, công cụ, trí nhớ hay lời dặn sẵn: Gemini chỉ nhận đúng câu bạn gõ, cùng lịch sử hội thoại và file hoặc ảnh bạn đính kèm. Riêng **Atlas 6** (cả 3 bản) được chờ tới **30 phút** (máy chủ trả lời trang ngay và gửi tín hiệu giữ kết nối mỗi 15 giây, trang hiện thời gian đã chờ; lỗi thì chuyển sang Nova ngay trong luồng đó), quá tải 503 thì không bị khoá, quá hạn chỉ tạm bỏ qua 60 giây; nhãn trong menu tự cập nhật theo câu hỏi thật vừa xong; do hạn mức gói miễn phí của Google rất thấp, trang không gọi thử nó khi kiểm tra trạng thái, không kéo nó vào giải cùng ở mức Kỹ/Tối đa/Ultra và không tự chấm lại thêm một lượt.
 
 Mô hình nào quá tải hoặc trả lời quá chậm thì trang tự chuyển sang mô hình GLM khác. Trang chỉ dùng mô hình miễn phí, không có chỗ nhập API key. Trang không dùng mô hình tải về máy; muốn chạy offline thì dùng `./chat.sh` hoặc `./server.sh` ở trên.
 
@@ -95,20 +94,11 @@ Giao diện có lịch sử chat (lưu trong trình duyệt), hiện quá trình
 
 Nút **Mức suy nghĩ** (biểu tượng bóng đèn) trong khung chat mở một thanh trượt 5 nấc (kéo, bấm hoặc dùng phím mũi tên; bấm vào tên mức để xem giải thích):
 
-- **Nhanh**: trả lời ngay, không suy nghĩ dài. Hợp chào hỏi, câu đơn giản.
-- **Cân bằng** (mặc định): suy nghĩ bình thường. Mô hình GLM tự chấm lại câu toán, logic, lập trình thi đấu.
+- **Nhanh**: trả lời ngay, không suy nghĩ dài. Hợp chào hỏi, câu đơn giản. Gửi gọn: không thêm lời dặn, không chấm lại, không tự sửa lỗi.
+- **Cân bằng** (mặc định): suy nghĩ ở mức `medium`, trả lời một lượt. Gửi gọn như Nhanh: không thêm lời dặn, không tự chấm lại, không tự chạy thử và sửa lỗi trang web. Mức suy nghĩ gửi cho AI khớp mức đã chọn: Cân bằng → `medium`; Kỹ/Tối đa/Ultra → `max`.
 - **Kỹ** (4 bước, khoảng 1–3 phút): phân tích đề (yêu cầu, dữ kiện, bẫy, kế hoạch, cách kiểm chứng) → giải theo kế hoạch với suy nghĩ ở mức cao nhất → một mô hình khác đóng vai người chấm, soát từng bước và chạy code kiểm chứng → sửa lỗi và viết câu trả lời cuối (người chấm không thấy lỗi thì giữ nguyên).
 - **Tối đa** (5 bước, khoảng 3–8 phút): phân tích đề → **ba mô hình giải song song** (mô hình đang chọn và hai mô hình mạnh khác họ), mỗi mô hình một góc nhìn: giải bình thường, giải theo hướng khác, đóng vai người phản biện tìm bẫy → **kiểm tra chéo**: cả ba mô hình soát tất cả lời giải và chạy code kiểm chứng → mô hình đang chọn tổng hợp, tự kiểm chứng chỗ khác nhau (không tin theo số đông) và viết câu trả lời → một mô hình khác **kiểm tra lần cuối**, còn lỗi thì sửa thêm một lượt. Bước nào quá chậm thì bị dừng đúng hạn và dùng phần đã viết.
-- **Ultra** (8 bước, hết công suất): phân tích đề → vòng 1: **bốn mô hình** giải độc lập → vòng 2: các mô hình **trao đổi suy luận**, đọc lời giải của cả nhóm, kiểm chứng chỗ mâu thuẫn bằng code rồi viết lại lời giải đã cải tiến → so sánh kết luận, **còn bất đồng thì thêm vòng 3** chỉ bàn về chỗ bất đồng → giám khảo tổng hợp → ba mô hình khác **kiểm tra chéo** → giám khảo **tinh chỉnh** theo nhận xét → kiểm tra lần cuối (sửa xong thì kiểm lại thêm một lượt). Khi yêu cầu là **xây dựng phần mềm** (làm web, app, game, công cụ), Ultra làm như một lập trình viên chuyên nghiệp, theo 7 bước:
-  1. viết **kế hoạch Markdown** (mục tiêu, yêu cầu, công nghệ, kiến trúc, cấu trúc thư mục, các giai đoạn kèm tiêu chí hoàn thành, kiểm thử, rủi ro);
-  2. một kỹ sư khác **phản biện kế hoạch**, rồi kế hoạch được cải tiến;
-  3. **code theo từng giai đoạn**, chạy thử và sửa lỗi ngay sau mỗi giai đoạn;
-  4. hai mô hình khác **rà soát code**;
-  5. sửa theo kết quả rà soát;
-  6. **chạy thử toàn bộ** (trang web) hoặc viết và chạy kiểm thử (code khác);
-  7. tổng hợp. Câu trả lời cuối có đủ mọi file, kèm `PLAN.md`.
-
-  **Lưu ý: Ultra chạy rất lâu (khoảng 6–30 phút), chỉ dùng cho bài khó hoặc việc lớn.**
+- **Ultra** (5 bước, khoảng 2–5 phút): làm y như **Kỹ** (phân tích đề → giải → một mô hình khác soát lỗi → sửa), rồi **kiểm tra lại thêm một lần** bằng một mô hình khác; còn lỗi thì sửa tiếp.
 
 Các lời giải nháp vẫn xem được bên trên câu trả lời, kèm tên mô hình.
 
