@@ -48,6 +48,22 @@ function atlas6(title, thinkingLevel) {
     thoughtTags: true, // lớp OpenAI: suy nghĩ nằm trong <thought>…</thought> của content
   };
 }
+// Helios = các mô hình Gemini thường trên Google AI Studio (cùng GEMINI_API_KEY và hạn mức với Atlas 6). Khác Atlas 6: nhận lời nhắc hệ thống,
+// kỹ năng và công cụ của Astra như bình thường; mức suy nghĩ theo chế độ trên trang (Nhanh = low, thường = medium, Tối đa = high).
+function helios(title, upstream) {
+  return {
+    title, key: "GEMINI_API_KEY", url: GEMINI_URL, maxTokens: 65536, vision: true,
+    models: () => [upstream],
+    native: (env) => env.GEMINI_ENDPOINT !== "openai",
+    noSampling: true, // dòng Gemini 3 trở lên: để Google tự chọn temperature, top_p, top_k
+    wait: 75_000, stall: 120_000, coolTimeout: 60_000, cool503: 0,
+    passiveStatus: true, // không gọi thử khi kiểm tra trạng thái để khỏi tốn lượt miễn phí
+    nativeExtra: (on, max) => ({ thinkingLevel: on ? (max ? "high" : "medium") : "low", includeThoughts: on }),
+    nativeRetry: (on) => ({ includeThoughts: on }), // id không nhận thinkingLevel thì thử lại không kèm mức
+    extra: (on, max) => ({ reasoning_effort: on ? (max ? "high" : "medium") : "low" }),
+    thoughtTags: true,
+  };
+}
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"; // lớp tương thích OpenAI (chỉ dùng khi GEMINI_ENDPOINT=openai)
 const GEMINI_NATIVE = "https://generativelanguage.googleapis.com/v1beta/models"; // API gốc: /{model}:streamGenerateContent?alt=sse (giống Google AI Studio)
@@ -63,6 +79,11 @@ const EXTERNAL_MODELS = {
   "gemini-4-hydrogen-medium": atlas6("Gemini 4 Hydrogen Medium", "medium"),
   "gemini-4-hydrogen-high": atlas6("Gemini 4 Hydrogen High", "high"),
   "gemini-4-hydrogen": atlas6("Gemini 4 Hydrogen", "xhigh"),
+  // Helios (Pro): chỉ các mô hình Gemini có gói miễn phí (Gemini 4 Argon và 3.1 Pro Preview phải trả phí nên không dùng).
+  "helios-3.8-flash": helios("Gemini 3.8 Flash", "gemini-3.8-flash"),
+  "helios-3.6-flash": helios("Gemini 3.6 Flash", "gemini-3.6-flash"),
+  "helios-3.5-flash-lite": helios("Gemini 3.5 Flash-Lite", "gemini-3.5-flash-lite"),
+  "helios-3.1-flash-lite": helios("Gemini 3.1 Flash-Lite", "gemini-3.1-flash-lite"),
 };
 // Các mô hình miễn phí trên NVIDIA (build.nvidia.com, khoảng 40 lượt mỗi phút cho cả tài khoản), cần biến bí mật NVIDIA_API_KEY.
 // Bản miễn phí của NVIDIA hay quá tải (xếp hàng nhiều phút, hoặc trả 200 mà không gửi gì): chỉ chờ chữ đầu tiên tối đa
