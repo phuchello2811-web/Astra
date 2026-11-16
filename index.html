@@ -1029,7 +1029,7 @@
       </button>
       <button class="deep chip" id="modelChip" type="button" aria-haspopup="menu" aria-expanded="false" title="Chọn mô hình">
         <span class="chip-ic" id="chipIcon"></span>
-        <span id="chipTitle">Titan Pro XS</span>
+        <span id="chipTitle">Titan 4 Mega</span>
         <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
       </button>
       <button class="deep chip" id="deep" type="button" aria-haspopup="menu" aria-expanded="false" title="Chọn mức suy nghĩ">
@@ -1185,13 +1185,13 @@
       name: "Astra",
       url: SHARED_URL,
       // Phải khớp FREE_MODELS trong worker/worker.js.
-      // Titan Pro XS = DeepSeek V4.1 Flash (NVIDIA NIM). Atlas 6 Medium/High/Omega = gemini-4-hydrogen trên Google AI Studio với mức suy nghĩ cố định medium/high/xhigh (GEMINI_API_KEY). Forge X = gpt-oss-120b (Groq).
-      models: ["glm-5.3-flash", "gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "deepseek-v4.1-flash", "gpt-oss-120b", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash",
+      // Atlas 6 Medium/High/Omega = gemini-4-hydrogen trên Google AI Studio với mức suy nghĩ cố định medium/high/xhigh (GEMINI_API_KEY). Forge X = gpt-oss-120b (Groq).
+      models: ["glm-5.3-flash", "gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "gpt-oss-120b", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash",
         "glm-4.7-flash", "glm-4.5-flash", "glm-4.6v-flash"],
-      // Toàn bộ 13 model mạnh đứng chung một nhóm "Mạnh nhất" (không còn tách rời). Atlas 6 có 3 bản theo mức suy nghĩ.
-      nvidia: ["glm-5.3-flash", "gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "deepseek-v4.1-flash", "gpt-oss-120b", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash"],
+      // Toàn bộ 12 model mạnh đứng chung một nhóm "Mạnh nhất" (không còn tách rời). Atlas 6 có 3 bản theo mức suy nghĩ.
+      nvidia: ["glm-5.3-flash", "gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "gpt-oss-120b", "nemotron-3-ultra", "nemotron-3.5-super-vl", "mistral-large-4", "nemotron-3.5-lightning", "laguna-xs", "step-5", "minimax-m3.1-flash"],
       visionNvidia: "nemotron-3.5-super-vl",
-      visionModels: ["gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "deepseek-v4.1-flash", "glm-5.3-flash", "nemotron-3.5-super-vl"],
+      visionModels: ["gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "glm-5.3-flash", "nemotron-3.5-super-vl"],
       vision: "glm-4.6v-flash",
       // Chỉ ghi tên trong Astra + ưu điểm, không lộ tên gốc.
       titles: {
@@ -1199,7 +1199,6 @@
         "gemini-4-hydrogen": ["Atlas 6 Omega", "Suy nghĩ sâu nhất (extra high): bài rất khó, code lớn, nhiều bước; có thể nghĩ nhiều phút"],
         "gemini-4-hydrogen-high": ["Atlas 6 High", "Suy nghĩ kỹ (high): suy luận, toán, code và đọc ảnh, tài liệu dài rất tốt"],
         "gemini-4-hydrogen-medium": ["Atlas 6 Medium", "Suy nghĩ vừa (medium): nhanh hơn, hợp câu hỏi thường, viết và tóm tắt"],
-        "deepseek-v4.1-flash": ["Titan Pro XS", "Rất mạnh: suy luận sâu, lập trình, kiến trúc hệ thống và đọc ảnh"],
         "gpt-oss-120b": ["Forge X", "Mô hình lớn, trả lời nhanh, suy luận và viết code mạnh"],
         "nemotron-3-ultra": ["Titan 3 Ultra", "Rất thông minh: suy luận, toán và code rất tốt"],
         "nemotron-3.5-super-vl": ["Titan 3.5 Vision", "Đọc ảnh giỏi, suy nghĩ kỹ, bắt được bẫy trong đề"],
@@ -1217,7 +1216,6 @@
         "gemini-4-hydrogen": ["#4f46e5", "#06b6d4", "M12 2l2.4 7.6L22 12l-7.6 2.4L12 22l-2.4-7.6L2 12l7.6-2.4Z"],
         "gemini-4-hydrogen-high": ["#2563eb", "#22d3ee", "M12 4l1.8 5.7L19.5 12l-5.7 1.8L12 19.5l-1.8-5.7L4.5 12l5.7-1.8Z"],
         "gemini-4-hydrogen-medium": ["#0891b2", "#34d399", "M12 6.5l1.2 3.8 3.8 1.7-3.8 1.7L12 17.5l-1.2-3.8L7 12l3.8-1.7Z"],
-        "deepseek-v4.1-flash": ["#0ea5e9", "#6366f1", "M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"],
         "gpt-oss-120b": ["#8b5cf6", "#ec4899", "M4 4h16v16H4zM8 8h8v8H8z"],
         "nemotron-3-ultra": ["#6d28d9", "#2563eb", "M6 3h12l4 6-10 12L2 9l4-6ZM2 9h20M12 21 8 9l2-6M12 21l4-12-2-6"],
         "nemotron-3.5-super-vl": ["#0891b2", "#22c55e", "M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12ZM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"],
@@ -1252,7 +1250,7 @@
 
   const modelTitle = (id, m) => PROVIDERS[id].titles[m]?.[0] || m;
   // Ghi chú của máy chủ dùng tên gốc của mô hình: đổi sang tên của Astra.
-  const ORIGINAL_NAMES = { "Gemini 4 Hydrogen Medium": "gemini-4-hydrogen-medium", "Gemini 4 Hydrogen High": "gemini-4-hydrogen-high", "DeepSeek V4.1 Flash": "deepseek-v4.1-flash", "gpt-oss-120b": "gpt-oss-120b", "Gemini 4 Hydrogen": "gemini-4-hydrogen", "GLM-5.3 Flash": "glm-5.3-flash", "Nemotron 3 Ultra": "nemotron-3-ultra", "Nemotron 3.5 Super VL": "nemotron-3.5-super-vl", "Nemotron 3.5 Lightning": "nemotron-3.5-lightning",
+  const ORIGINAL_NAMES = { "Gemini 4 Hydrogen Medium": "gemini-4-hydrogen-medium", "Gemini 4 Hydrogen High": "gemini-4-hydrogen-high", "gpt-oss-120b": "gpt-oss-120b", "Gemini 4 Hydrogen": "gemini-4-hydrogen", "GLM-5.3 Flash": "glm-5.3-flash", "Nemotron 3 Ultra": "nemotron-3-ultra", "Nemotron 3.5 Super VL": "nemotron-3.5-super-vl", "Nemotron 3.5 Lightning": "nemotron-3.5-lightning",
     "Mistral Large 4": "mistral-large-4", "Laguna XS": "laguna-xs", "Step 5": "step-5", "MiniMax M3.1 Flash": "minimax-m3.1-flash", "GLM-4.7 Flash": "glm-4.7-flash", "GLM-4.5 Flash": "glm-4.5-flash", "GLM-4.6V Flash": "glm-4.6v-flash" };
   const brandNote = (t) => Object.entries(ORIGINAL_NAMES).reduce((a, [o, id]) => a.split(o).join(modelTitle("shared", id)), String(t || ""))
     .replace(/GLM của Z\.ai|Z\.ai|(?:NVIDIA|GROQ|GEMINI)_API_KEY(?:_\d)?|GEMINI_MODEL|NVIDIA/g, (w) => (/_API_KEY(_\d)?$|_MODEL$/.test(w) ? "khoá máy chủ" : "máy chủ dự phòng")).replace(/\b(?:openai\/)?(?:gemini|gpt-oss)-[\w.-]+/gi, "mô hình gốc");
@@ -1436,7 +1434,8 @@
   // bỏ mô hình đã biết là đang lỗi (chưa có kết quả kiểm tra thì cứ thử; máy chủ vẫn tự chuyển sang GLM nếu lỗi).
   // Ưu tiên mô hình mạnh mà trả lời nhanh (GLM của Z.ai hay nghĩ rất lâu khi đông nên xếp sau).
   const QUOTA_LIMITED = ["gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium"]; // gói miễn phí giới hạn lượt/phút và lượt/ngày rất thấp
-  const COUNCIL_ORDER = ["gemini-4-hydrogen", "deepseek-v4.1-flash", "glm-5.3-flash", "nemotron-3-ultra", "gpt-oss-120b", "mistral-large-4", "minimax-m3.1-flash", "nemotron-3.5-super-vl", "glm-4.7-flash", "nemotron-3.5-lightning", "laguna-xs", "glm-4.5-flash"];
+  const isAtlas6 = (m) => QUOTA_LIMITED.includes(m);
+  const COUNCIL_ORDER = ["gemini-4-hydrogen", "glm-5.3-flash", "nemotron-3-ultra", "gpt-oss-120b", "mistral-large-4", "minimax-m3.1-flash", "nemotron-3.5-super-vl", "glm-4.7-flash", "nemotron-3.5-lightning", "laguna-xs", "glm-4.5-flash"];
   async function councilModels(n = 2) {
     const cur = cloudModel();
     await Promise.race([loadModelStatus(), new Promise((ok) => setTimeout(ok, 4000))]);
@@ -2106,13 +2105,8 @@
     "Cách đọc ảnh: (1) nhìn tổng thể; (2) quét từng vùng từ trên xuống, trái sang phải, gồm góc & chữ nhỏ; " +
     "(3) chép NGUYÊN VĂN chữ, số, công thức; (4) biểu đồ/bảng: đọc tiêu đề, trục, đơn vị, chú thích trước; " +
     "(5) toán/code trong ảnh: chép lại rồi giải & kiểm chứng bằng công cụ; (6) chỗ mờ nói rõ không đọc được, không bịa.";
-  const ATLAS6_PROFILE = (name, depth) => `Sở trường & kỷ luật ${name}:\n${depth}\n` + "- Thực thi agent nhiều bước, đọc tài liệu/codebase lớn và sửa code chuẩn xác: lập kế hoạch bước trước khi sửa, giữ đúng hợp đồng giữa các file (import/export, id/class, kiểu), kiểm chứng bằng công cụ sau khi sửa.\n- Làm web/game/slide: chú trọng độ hoàn thiện giao diện, không để sót nút chết hay edge case.\n- Ảnh: " + VISION_PROMPT;
   const MODEL_PROFILES = {
     "glm-5.3-flash": "Sở trường & kỷ luật Titan 4 Mega:\n- Cân bằng tốc độ và độ sâu: câu dễ gọn ngay; câu khó đi 2 hướng độc lập và chạy công cụ kiểm chứng.\n- Chống tự tin quá mức: luôn thử tìm 1 phản ví dụ hoặc case suy biến để bác bỏ đáp án nháp.\n- Ảnh: " + VISION_PROMPT,
-    "gemini-4-hydrogen": ATLAS6_PROFILE("Atlas 6 Omega", "Bạn suy nghĩ ở mức sâu nhất: dành thời gian kiểm chứng kỹ trước khi trả lời."),
-    "gemini-4-hydrogen-high": ATLAS6_PROFILE("Atlas 6 High", "Bạn suy nghĩ ở mức kỹ: cân bằng giữa độ sâu và tốc độ."),
-    "gemini-4-hydrogen-medium": ATLAS6_PROFILE("Atlas 6 Medium", "Bạn suy nghĩ ở mức vừa: trả lời gọn, nhanh; bài khó vẫn kiểm chứng bằng công cụ."),
-    "deepseek-v4.1-flash": "Sở trường & kỷ luật Titan Pro XS:\n- Suy luận sâu & kiến trúc hệ thống: đi từ nguyên lý gốc; tách lớp dữ liệu, logic, bất biến và luồng lỗi.\n- Code & sửa dự án: đối chiếu chính xác tên file, export/import, selector; không over-engineer việc nhỏ; thử biên bằng công cụ.\n- Tự soát: cảnh giác off-by-one và giả định ngầm; tránh lặp suy nghĩ.\n- Ảnh: " + VISION_PROMPT,
     "gpt-oss-120b": "Sở trường & kỷ luật Forge X:\n- Tốc độ cao với bài nhiều ràng buộc: lập checklist kiểm từng ràng buộc thay vì dựa cảm giác.\n- Toán & code: kiểm chứng qua py-run/js-run/cpp-run và thử biên (0, rỗng, âm, trùng, lớn).",
     "nemotron-3-ultra": "Sở trường & kỷ luật Titan 3 Ultra:\n- Toán, chứng minh và thuật toán: lập luận chặt, nêu định lý & điều kiện áp dụng, xét đủ nhánh đặc biệt.\n- Chống chủ quan: dù thấy hiển nhiên vẫn chạy code với số nhỏ hoặc thay ngược đề để xác nhận 100%.",
     "nemotron-3.5-super-vl": "Sở trường & kỷ luật Titan 3.5 Vision:\n- " + VISION_PROMPT + "\n- Câu chữ/logic: đọc từng chữ bắt bẫy, phân biệt điều kiện cần/đủ, kiểm số bằng py-run.",
@@ -2220,9 +2214,22 @@
     "- Tiện ích: chia sẻ (Web Share API, sao chép liên kết), in đẹp (@media print), tải về (CSV, JSON, ảnh), đọc to bằng speechSynthesis giọng vi-VN khi hợp, " +
     "toàn màn hình, PWA cài được và chạy ngoại tuyến.\n" +
     "- Ít mà xuất sắc hơn nhiều mà dở: tính năng nào cũng phải hoàn chỉnh, đẹp và không lỗi.";
-  const TITANS = ["glm-5.3-flash", "gemini-4-hydrogen", "gemini-4-hydrogen-high", "gemini-4-hydrogen-medium", "deepseek-v4.1-flash", "gpt-oss-120b", "nemotron-3-ultra", "nemotron-3.5-super-vl", "nemotron-3.5-lightning"];
+  const TITANS = ["glm-5.3-flash", "gpt-oss-120b", "nemotron-3-ultra", "nemotron-3.5-super-vl", "nemotron-3.5-lightning"];
   // Gắn điểm mạnh của đúng mô hình sắp nhận câu hỏi vào lời nhắc hệ thống (bản sao, không đổi lịch sử).
+  // Atlas 6: bỏ mọi prompt sẵn (hệ thống, kỹ năng, công cụ, lời dặn thêm). Chỉ còn đúng hội thoại người dùng đã gửi.
+  function atlasRaw(messages) {
+    const strip = (s) => typeof s === "string" ? s.replace(/\n\n\(Yêu cầu thêm:[\s\S]*\)$/, "") : s;
+    const out = [];
+    for (const m of messages || []) {
+      if (!m || m.role === "system") continue;
+      if (m.role === "user" && typeof m.content === "string") out.push({ ...m, content: strip(m.content) });
+      else if (m.role === "user" && Array.isArray(m.content)) out.push({ ...m, content: m.content.map((part, i) => i === 0 && part?.type === "text" ? { ...part, text: strip(part.text || "") } : part) });
+      else out.push(m);
+    }
+    return out.length ? out : [{ role: "user", content: "" }];
+  }
   function withProfile(messages, model) {
+    if (isAtlas6(model)) return atlasRaw(messages);
     if (messages[0]?.role !== "system" || typeof messages[0].content !== "string") return messages;
     // lite: lời nhắc đã bị rút gọn vì quá dài (xem shrinkMessages), không thêm phần dặn dò phụ. Không gửi cờ này lên máy chủ.
     const { lite, ...sys } = messages[0];
@@ -2901,6 +2908,10 @@
       delete reply.noGaps;
     };
     try {
+      if (isAtlas6(cloudModel())) {
+        // Không chạy quy trình nhiều bước: mỗi bước là một prompt sẵn. Chỉ một lượt, payload đã lọc ở withProfile.
+        await answerWithTools(history, reply, node);
+      } else {
       const deep = level === "careful" || level === "max" || level === "ultra";
       const total = { careful: 4, max: 5, ultra: 8 }[level];
       const helpers = deep ? await councilModels({ careful: 1, max: 2, ultra: 3 }[level]) : [];
@@ -3072,6 +3083,7 @@
       }
       // Trang web hoàn chỉnh: tự chạy thử, có lỗi thì tự sửa (tối đa 2 lượt).
       await autoFixWeb(history, reply, node);
+      }
     } catch (e) {
       if (e.name !== "AbortError") {
         reply.error = /Failed to fetch|NetworkError|Load failed/i.test(e.message)
