@@ -48,11 +48,16 @@ Trang chat có tên **Astra AI**. Astra dùng máy chủ chung, dựng theo [wor
 
 Các mô hình của Astra được đặt tên theo họ: cùng gốc thì cùng tên, giữ nguyên số phiên bản, vì chúng cùng dùng cách suy nghĩ, kỹ năng, công cụ và quy trình kiểm tra chéo riêng của Astra. Khi được hỏi, Astra tự giới thiệu là Astra và tên mô hình đang chạy. Bấm nút tên mô hình trong khung chat để chọn:
 
-Nhóm **Mạnh nhất** (chạy trên NVIDIA, cần thêm key NVIDIA vào máy chủ theo [worker/README.md](worker/README.md)):
+Nhóm **Mạnh nhất** (11 mô hình chung một nhóm; chạy trên NVIDIA, Google AI Studio và Groq, cần thêm key vào máy chủ, xem mục *Khoá API của máy chủ* bên dưới):
 
 | Tên trong Astra | Mô hình gốc | Điểm mạnh |
 | --- | --- | --- |
 | **Titan 4 Mega** (mặc định) | GLM-5.3 Flash | mạnh nhất: suy luận, toán, code và đọc ảnh, trả lời nhanh |
+| **Atlas 6 Omega** | Gemini 4 Hydrogen, suy nghĩ `xhigh` (Google AI Studio) | sâu nhất: bài rất khó, code lớn, nhiều bước; có thể nghĩ nhiều phút |
+| **Atlas 6 High** | Gemini 4 Hydrogen, suy nghĩ `high` | suy luận, toán, code, đọc ảnh và tài liệu dài |
+| **Atlas 6 Medium** | Gemini 4 Hydrogen, suy nghĩ `medium` | nhanh hơn, hợp câu hỏi thường, viết và tóm tắt |
+| **Titan Pro XS** | DeepSeek V4.1 Flash | suy luận sâu, lập trình, kiến trúc hệ thống và đọc ảnh |
+| **Forge X** | gpt-oss-120b (Groq) | mô hình lớn, trả lời nhanh, suy luận và viết code mạnh |
 | **Titan 3 Ultra** | Nemotron 3 Ultra | rất thông minh, suy luận, toán và code rất tốt |
 | **Titan 3.5 Vision** | Nemotron 3.5 Super VL | đọc ảnh giỏi, suy nghĩ kỹ; câu hỏi có ảnh tự gửi tới mô hình này |
 | **Lyra 4** | Mistral Large 4 | viết văn hay, dịch và dùng nhiều ngôn ngữ giỏi |
@@ -82,7 +87,7 @@ Ba mô hình nhóm Nhanh và ổn định có thêm lời dặn riêng cho nhữ
 - **Studio** (làm website): luôn bật kỹ năng làm web, phát triển ứng dụng web lớn, dự án nhiều file, kiến thức web và vẽ SVG.
 - **Arena** (lập trình thi đấu): luôn bật kỹ năng IOI, lập trình và toán. Lời giải được kiểm tra bằng cpp-run, đối chiếu với lời giải trâu trước khi nộp.
 
-Danh sách trên đã được kiểm tra trả lời được ngày 13/11/2026. Titan 4 Mega được chọn làm mặc định sau bài kiểm tra 5 câu toán khó (không dùng công cụ): đúng 5/5, trung bình khoảng 27 giây mỗi câu, so với Titan 3 Ultra đúng 4/5 và chậm hơn. **Nova 5 Prime** (MiniMax M3.1 Flash, thêm ngày 14/11/2026) được chọn sau khi so với Nova 4.7 trên 3 bài toán, logic và code: đúng cả 3 (14–63 giây mỗi câu), còn Nova 4.7 có câu không trả lời sau hơn 14 phút vì Z.ai quá tải. Trên Z.ai, các mô hình mạnh hơn (GLM-4.7 bản đầy đủ, GLM-5.x) đều cần trả phí nên không dùng được. DeepSeek V4.1 Flash trên NVIDIA đang quá tải; Kimi K2.6 và Nemotron 3 Super đã bị NVIDIA gỡ khỏi bản miễn phí, nên chưa có trong menu. Khi mở menu, mỗi mô hình mạnh có nhãn **Sẵn sàng** hoặc **Đang quá tải**. Mô hình nào không trả lời trong 25 giây thì máy chủ trả lời bằng Nova 4.7, ghi lý do dưới câu trả lời, và tạm bỏ qua mô hình đó 5 phút.
+Danh sách trên đã được kiểm tra trả lời được ngày 13/11/2026. Titan 4 Mega được chọn làm mặc định sau bài kiểm tra 5 câu toán khó (không dùng công cụ): đúng 5/5, trung bình khoảng 27 giây mỗi câu, so với Titan 3 Ultra đúng 4/5 và chậm hơn. **Nova 5 Prime** (MiniMax M3.1 Flash, thêm ngày 14/11/2026) được chọn sau khi so với Nova 4.7 trên 3 bài toán, logic và code: đúng cả 3 (14–63 giây mỗi câu), còn Nova 4.7 có câu không trả lời sau hơn 14 phút vì Z.ai quá tải. Trên Z.ai, các mô hình mạnh hơn (GLM-4.7 bản đầy đủ, GLM-5.x) đều cần trả phí nên không dùng được. DeepSeek V4.1 Flash trên NVIDIA đang quá tải; Kimi K2.6 và Nemotron 3 Super đã bị NVIDIA gỡ khỏi bản miễn phí, nên chưa có trong menu. Khi mở menu, mỗi mô hình mạnh có nhãn **Sẵn sàng** hoặc **Đang quá tải**. Mô hình nào không trả lời trong 25 giây thì máy chủ trả lời bằng Nova 4.7, ghi lý do dưới câu trả lời, và tạm bỏ qua mô hình đó 5 phút. Riêng **Atlas 6** (cả 3 bản) được chờ tới **30 phút** (máy chủ trả lời trang ngay và gửi tín hiệu giữ kết nối mỗi 15 giây, trang hiện thời gian đã chờ; lỗi thì chuyển sang Nova ngay trong luồng đó), quá tải 503 thì không bị khoá, quá hạn chỉ tạm bỏ qua 60 giây; nhãn trong menu tự cập nhật theo câu hỏi thật vừa xong; do hạn mức gói miễn phí của Google rất thấp, trang không gọi thử nó khi kiểm tra trạng thái, không kéo nó vào giải cùng ở mức Kỹ/Tối đa/Ultra và không tự chấm lại thêm một lượt.
 
 Mô hình nào quá tải hoặc trả lời quá chậm thì trang tự chuyển sang mô hình GLM khác. Trang chỉ dùng mô hình miễn phí, không có chỗ nhập API key. Trang không dùng mô hình tải về máy; muốn chạy offline thì dùng `./chat.sh` hoặc `./server.sh` ở trên.
 
@@ -195,8 +200,50 @@ MODEL_QUANT=Q4_K_M ./chat.sh
 - Các script trong repo này: giấy phép MIT (xem [LICENSE](LICENSE))
 
 
-## Titan Pro XS (15/11/2026)
+## Tab Coding
 
-- **Titan Pro XS** = DeepSeek V4.1 Flash gọi thẳng API DeepSeek (ổn định hơn NVIDIA NIM), có vision.
-- Cần đặt biến bí mật `DEEPSEEK_API_KEY` trên Cloudflare Worker (lấy key tại https://platform.deepseek.com).
-- Đứng trên Titan 4 Mega trong menu nhóm Mạnh nhất.
+- **Sửa code trực tiếp:** bấm **Sửa** (Ctrl+E) trên thanh đường dẫn. Tab có chấm tròn là file bạn đã sửa; **Xong** (Ctrl+S hoặc Esc) để xem lại có tô màu;
+  nút mũi tên quay lại khôi phục bản gốc của file. Tab chèn 2 khoảng trắng, Enter tự giữ thụt lề. Đang mở xem trước thì trang tự tải lại khi bạn ngừng gõ.
+- **Tạo file mới:** nút có dấu + ở góc Explorer.
+- **Console** (Ctrl+`, hoặc nút ✕/⚠ ở thanh trạng thái): hiện `console.log`, cảnh báo và lỗi của trang xem trước; có lỗi thì bấm **Nhờ Astra sửa lỗi**.
+- File bạn sửa được gửi kèm khi hỏi Astra AI; khi AI cập nhật dự án, file bạn đã sửa mà AI không đụng tới vẫn giữ bản của bạn. Nút **.zip** tải về cả phần bạn đã sửa.
+
+**Atlas 6** có 3 bản, mức suy nghĩ **cố định** theo bản (không phụ thuộc chế độ Nhanh/Cân bằng/Kỹ/Tối đa/Ultra): Medium → `medium`, High → `high`, Omega → `xhigh`. Cả 3 dùng chung `GEMINI_API_KEY` (và key dự phòng) nên chung hạn mức của Google.
+- **Phần sửa tay được lưu** trong trình duyệt theo từng đoạn chat: tải lại trang vẫn còn (chỉ khôi phục khi AI chưa viết bản mới của file đó).
+
+## Khoá API của máy chủ (Cloudflare Worker)
+
+Máy chủ chung (`worker/worker.js`) đọc các biến bí mật sau. Thiếu biến nào thì mô hình tương ứng hiện **Đang quá tải** trong menu,
+và câu hỏi vẫn tự chạy dự phòng qua **Nova 4.7** (GLM của Z.ai), nên trang không bị lỗi.
+
+| Biến bí mật | Bắt buộc | Dùng cho | Lấy ở đâu |
+| --- | --- | --- | --- |
+| `ZAI_API_KEY` | có | nhóm Nova (dự phòng cho mọi mô hình) | https://z.ai |
+| `NVIDIA_API_KEY` | không | Titan, Lyra, Atlas, Forge XS, Nova 5 Prime | https://build.nvidia.com |
+| `GEMINI_API_KEY` | không | Atlas 6 Medium, High, Omega | https://aistudio.google.com/apikey |
+| `GEMINI_API_KEY_2`, `GEMINI_API_KEY_3` | không | key dự phòng cho Atlas 6 Omega: key đang dùng hết lượt (429), sai, hoặc quá tải thì tự chuyển sang key kế tiếp | nên tạo ở **project Google khác** để có hạn mức riêng |
+| `GROQ_API_KEY_2`, `GROQ_API_KEY_3` | không | key dự phòng cho Forge X, cùng cách | — |
+| `GROQ_API_KEY` | không | Forge X (gpt-oss-120b) | https://console.groq.com/keys |
+| `GEMINI_ENDPOINT` | không (biến thường) | đặt `openai` để dùng lớp tương thích OpenAI thay cho API gốc | — |
+| `GEMINI_MODEL` | không (biến thường) | id Gemini muốn dùng trước; mặc định `gemini-4-hydrogen`, dự phòng `gemini-3.8-flash` nếu id báo 404 | — |
+
+### Thêm `GEMINI_API_KEY` cho Atlas 6 Omega (không cần sửa `index.html`)
+
+1. Vào Google AI Studio → **Get API key** → tạo key mới và sao chép.
+2. **Cách 1 — Cloudflare Dashboard:** https://dash.cloudflare.com → **Workers & Pages** → chọn Worker → **Settings** →
+   **Variables and Secrets** → **Add** → Type **Secret**, tên `GEMINI_API_KEY`, dán key → **Deploy**.
+3. **Cách 2 — Wrangler CLI:**
+   ```bash
+   cd worker
+   npx wrangler secret put GEMINI_API_KEY     # dán key rồi Enter
+   npx wrangler secret put GEMINI_API_KEY_2   # (tuỳ chọn) key dự phòng 1
+   npx wrangler secret put GEMINI_API_KEY_3   # (tuỳ chọn) key dự phòng 2
+   npx wrangler deploy
+   ```
+4. **Kiểm tra:** mở Astra → menu mô hình → **Atlas 6 Omega** hiện **Sẵn sàng**. Nhãn trong menu cho biết đúng lý do khi lỗi:
+   **Chưa có key**, **Key sai**, **Sai tên model** (404), **Hết lượt/phút** (429, giới hạn gói miễn phí) hoặc **Đang quá tải**. Thêm `GROQ_API_KEY` cho Forge X làm y hệt.
+
+Ghi chú kỹ thuật: Atlas 6 Omega gọi **API gốc** của Google (`v1beta/models/gemini-4-hydrogen:streamGenerateContent`),
+giống Google AI Studio, theo đúng tài liệu của model: không gửi `temperature`/`top_p`, mức suy nghĩ `high` (Kỹ/Tối đa/Ultra: `xhigh`),
+phần suy nghĩ được đổi sang khung suy nghĩ của Astra. Google quá tải (503) thì máy chủ thử lại 2 lần, rồi dùng `gemini-3.8-flash`,
+cuối cùng mới tới Nova 4.7. Muốn quay lại lớp tương thích OpenAI thì đặt biến thường `GEMINI_ENDPOINT=openai`.

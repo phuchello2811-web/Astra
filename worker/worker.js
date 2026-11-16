@@ -1,13 +1,13 @@
 // Máy chủ trung gian cho trang GLM: giữ API key Z.ai để mọi người dùng chung mà không thấy key.
 //
 // An toàn:
-// - Key nằm trong biến bí mật ZAI_API_KEY, NVIDIA_API_KEY, GROQ_API_KEY (nếu có) của Cloudflare, không có trong code.
+// - Key nằm trong biến bí mật ZAI_API_KEY, NVIDIA_API_KEY, GROQ_API_KEY, GEMINI_API_KEY (nếu có) của Cloudflare, không có trong code.
 // - Chỉ cho dùng mô hình miễn phí / có key riêng, nên kể cả bị lạm dụng cũng không mất tiền ngoài hạn mức key.
 // - Chỉ trình duyệt mở từ các trang trong ALLOWED_ORIGINS mới gọi được (chặn trang web khác dùng ké).
 // - Giới hạn số lượt hỏi mỗi phút cho mỗi địa chỉ IP.
 //
 // Các đường dẫn:
-// - POST /        chat với GLM (Z.ai) hoặc DeepSeek / NVIDIA.
+// - POST /        chat với GLM (Z.ai), NVIDIA, Groq (Forge X) hoặc Google AI Studio (Atlas 6 Medium/High/Omega).
 // - POST /image   tạo ảnh bằng Cloudflare Workers AI (cần binding AI, xem README).
 // - POST /sync    đồng bộ lịch sử chat giữa các máy (cần binding D1 tên DB, xem README).
 // - POST /status  kiểm tra mô hình mạnh nào đang trả lời được (để menu chọn mô hình hiện trạng thái).
@@ -15,10 +15,55 @@
 const UPSTREAM = "https://api.z.ai/api/paas/v4/chat/completions";
 const FREE_MODELS = ["glm-4.7-flash", "glm-4.5-flash", "glm-4.6v-flash"];
 const VISION_MODEL = "glm-4.6v-flash"; // mô hình miễn phí duy nhất của Z.ai đọc được ảnh
-// Titan Pro XS = Qwen 3.8 27B qua Groq (free, rất nhanh, có vision). Cần biến bí mật GROQ_API_KEY.
+// Mô hình ở nhà cung cấp riêng (API kiểu OpenAI), mỗi cái cần một biến bí mật riêng. Thiếu key, quá tải hay lỗi
+// thì máy chủ tự trả lời bằng GLM của Z.ai (Nova 4.7) và ghi lý do vào X-GLM-Note, nên trang không bao giờ bị lỗi.
+// - Forge X = gpt-oss-120b trên Groq (GROQ_API_KEY, https://console.groq.com/keys).
+// - Gemini 4 Hydrogen trên Google AI Studio (GEMINI_API_KEY, https://aistudio.google.com/apikey).
+//   Trang tách thành 3 mô hình: Atlas 6 Medium / High / Omega = gemini-4-hydrogen với mức suy nghĩ medium / high / xhigh.
+//   Thứ tự thử: biến GEMINI_MODEL (nếu có) → gemini-4-hydrogen → gemini-3.8-flash (chỉ khi id trước báo 404).
+//   Id chạy được thì nhớ lại để lần sau gọi thẳng.
+// Cấu hình chung của các mô hình Atlas 6 (gemini-4-hydrogen trên Google AI Studio); chỉ khác nhau ở mức suy nghĩ.
+function atlas6(title, thinkingLevel) {
+  return {
+    title, key: "GEMINI_API_KEY", url: GEMINI_URL, maxTokens: 65536, vision: true, thinkingLevel,
+    models: (env) => [...new Set([env.GEMINI_MODEL, "gemini-4-hydrogen", "gemini-3.8-flash"].filter(Boolean))],
+    // Mặc định gọi API gốc của Google (streamGenerateContent), đúng như tài liệu gemini-4-hydrogen và như Google AI Studio.
+    // Muốn thử lớp tương thích OpenAI thì đặt biến GEMINI_ENDPOINT=openai.
+    native: (env) => env.GEMINI_ENDPOINT !== "openai",
+    // Google yêu cầu BỎ temperature, top_p, top_k với gemini-4-hydrogen.
+    noSampling: true,
+    // Có thể suy nghĩ rất lâu: chờ chữ đầu tiên tối đa 30 phút, đang viết mà đứng yên 30 phút mới ngắt. longStream: trả lời trình duyệt
+    // ngay và giữ kết nối trong lúc chờ (xem streamExternal). Quá hạn thì tạm bỏ qua 60 giây; quá tải 503 thì KHÔNG khoá.
+    // Có thể đặt thêm GEMINI_API_KEY_2, GEMINI_API_KEY_3: key đang dùng hết lượt hay lỗi thì tự chuyển sang key kế tiếp.
+    wait: 1_800_000, stall: 1_800_000, longStream: true, coolTimeout: 60_000, cool503: 0,
+    // Gói miễn phí có hạn mức rất thấp: /status KHÔNG gọi thử (mỗi lần gọi thử tốn 1 lượt), trạng thái lấy từ câu hỏi thật gần nhất.
+    passiveStatus: true,
+    // gemini-4-hydrogen nhận low/medium/high/xhigh (không nhận minimal).
+    nativeExtra: () => ({ thinkingLevel, includeThoughts: true }),
+    // Id dự phòng (gemini-3.8-flash) không nhận mức đó thì để Google tự chọn mức mặc định.
+    nativeRetry: () => ({ includeThoughts: true }),
+    // Lớp tương thích OpenAI (chỉ khi GEMINI_ENDPOINT=openai): không được dùng reasoning_effort cùng thinking_config.
+    extra: () => ({ extra_body: { google: { thinking_config: { thinking_level: thinkingLevel, include_thoughts: true } } } }),
+    retry: () => ({ reasoning_effort: thinkingLevel === "medium" ? "medium" : "high" }),
+    thoughtTags: true, // lớp OpenAI: suy nghĩ nằm trong <thought>…</thought> của content
+  };
+}
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_ID = "qwen-3.8-27b"; // id nội bộ trên trang Astra (= Titan Pro XS)
-const GROQ_MODEL = "qwen/qwen3.8-27b"; // id thật trên Groq
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"; // lớp tương thích OpenAI (chỉ dùng khi GEMINI_ENDPOINT=openai)
+const GEMINI_NATIVE = "https://generativelanguage.googleapis.com/v1beta/models"; // API gốc: /{model}:streamGenerateContent?alt=sse (giống Google AI Studio)
+const EXTERNAL_MODELS = {
+  "gpt-oss-120b": {
+    title: "gpt-oss-120b", key: "GROQ_API_KEY", url: GROQ_URL, maxTokens: 32768,
+    models: () => ["openai/gpt-oss-120b"],
+    // gpt-oss trên Groq: mức suy nghĩ low/medium/high; phần suy nghĩ trả về ở trường reasoning (trang đã đọc được).
+    extra: (on, max) => ({ reasoning_effort: on ? (max ? "high" : "medium") : "low" }),
+  },
+  // Atlas 6 = gemini-4-hydrogen, tách 3 mô hình theo mức suy nghĩ CỐ ĐỊNH (không phụ thuộc chế độ Nhanh/Cân bằng/... trên trang):
+  // Atlas 6 Medium → medium, Atlas 6 High → high, Atlas 6 Omega → xhigh. Cả 3 dùng chung key và hạn mức của Google.
+  "gemini-4-hydrogen-medium": atlas6("Gemini 4 Hydrogen Medium", "medium"),
+  "gemini-4-hydrogen-high": atlas6("Gemini 4 Hydrogen High", "high"),
+  "gemini-4-hydrogen": atlas6("Gemini 4 Hydrogen", "xhigh"),
+};
 // Các mô hình miễn phí trên NVIDIA (build.nvidia.com, khoảng 40 lượt mỗi phút cho cả tài khoản), cần biến bí mật NVIDIA_API_KEY.
 // Bản miễn phí của NVIDIA hay quá tải (xếp hàng nhiều phút, hoặc trả 200 mà không gửi gì): chỉ chờ chữ đầu tiên tối đa
 // NVIDIA_WAIT, không được thì dùng GLM của Z.ai và tạm bỏ qua mô hình đó một lúc để các câu sau khỏi phải chờ lại.
@@ -31,6 +76,7 @@ const NVIDIA_MODELS = {
   "nemotron-3.5-super-vl": { id: "nvidia/nemotron-3.5-super-vl-120b-a12b", title: "Nemotron 3.5 Super VL", vision: true, think: "kwargs" },
   "nemotron-3.5-lightning": { id: "nvidia/nemotron-3.5-lightning-30b-a3b", title: "Nemotron 3.5 Lightning", think: "kwargs" },
   "mistral-large-4": { id: "mistralai/mistral-large-4-1t-a52b", title: "Mistral Large 4" },
+  "deepseek-v4.1-flash": { id: "deepseek-ai/deepseek-v4.1-flash", title: "DeepSeek V4.1 Flash", think: "kwargs", vision: true },
   "minimax-m3.1-flash": { id: "minimaxai/minimax-m3.1-flash", title: "MiniMax M3.1 Flash" },
   "step-5": { id: "stepfun-ai/step-5-preview", title: "Step 5" },
   "nemotron-3-super": { id: "nvidia/nemotron-3-super-120b-a12b", title: "Nemotron 3 Super", think: "kwargs", trial: true },
@@ -44,8 +90,11 @@ const NVIDIA_MODELS = {
   "laguna-xs": { id: "poolside/laguna-xs-2.1", title: "Laguna XS" },
 };
 const NVIDIA_WAIT = 25_000; // chờ chữ đầu tiên tối đa 25 giây
+const HEADER_WAIT = 15_000; // nhà cung cấp riêng: mỗi lần gọi chờ phản hồi đầu (mã trạng thái) tối đa 15 giây
 const STALL = 90_000; // đang trả lời mà đứng yên quá 90 giây thì ngắt, để trang tự nối lại
 const nvidiaDown = new Map(); // mô hình -> { until, note }: tạm bỏ qua sau khi lỗi
+const lastOutcome = new Map(); // mô hình -> kết quả câu hỏi thật gần nhất { ok, note, at } (dùng cho trạng thái không gọi thử)
+const workingModel = new Map(); // mô hình ở nhà cung cấp riêng -> id thật đã chạy được (để lần sau gọi thẳng)
 let statusCache = null; // kết quả kiểm tra các mô hình mạnh gần nhất
 const MAX_IMAGES = 8;
 const DEFAULT_ORIGINS = [
@@ -82,7 +131,7 @@ function overLimit(key, max) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origins = env.ALLOWED_ORIGINS ? env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()) : DEFAULT_ORIGINS;
     const origin = request.headers.get("Origin") || "";
     const allowed = origins.includes(origin);
@@ -147,24 +196,30 @@ export default {
       max_tokens: Math.round(clamp(body.max_tokens, 1, MAX_TOKENS, 16384)),
       thinking: { type: body.thinking?.type === "disabled" ? "disabled" : "enabled" },
       effort: body.effort === "max" ? "max" : "high", // chế độ Nghĩ kỹ: GLM-5.3 suy nghĩ ở mức tối đa
+      // Chế độ người dùng chọn trên trang (Nhanh, Cân bằng, Kỹ, Tối đa, Ultra): chỉ dùng nội bộ, không gửi sang nhà cung cấp.
+      level: ["fast", "normal", "careful", "max", "ultra"].includes(body.level) ? body.level : undefined,
     };
 
-    // Titan Pro XS = Qwen 3.8 27B (Groq free, rất nhanh). Các mô hình NVIDIA còn lại thử NVIDIA trước.
+    // Gemini 4 Hydrogen (Google) và Forge X (Groq) gọi nhà cung cấp riêng; các mô hình NVIDIA thử NVIDIA trước.
     // Câu hỏi có ảnh mà mô hình không đọc được ảnh thì dùng GLM-5.3 Flash.
     // Không dùng được thì trả lời bằng GLM của Z.ai và ghi lý do vào X-GLM-Note để trang hiện cho người dùng.
     let upstream, used, note = "", stream = null;
-    if (body.model === GROQ_ID) {
-      const title = "Qwen 3.8 27B", down = nvidiaDown.get(GROQ_ID);
-      if (!env.GROQ_API_KEY) note = `${title} chưa được bật trên máy chủ (thiếu GROQ_API_KEY)`;
+    const ext = EXTERNAL_MODELS[body.model];
+    if (ext && (!images || ext.vision)) {
+      const id = body.model, title = ext.title, down = nvidiaDown.get(id);
+      // Mô hình suy nghĩ rất lâu: trả lời ngay bằng luồng có giữ kết nối, tự chuyển sang Z.ai trong luồng nếu lỗi.
+      if (ext.longStream && clean.stream && keysOf(ext, env).length && !(down && down.until > Date.now()))
+        return streamExternal(id, ext, clean, images, model, env, cors, ctx);
+      if (!keysOf(ext, env).length) note = `${title} chưa được bật trên máy chủ (thiếu ${ext.key})`;
       else if (!clean.stream) note = `${title} chỉ dùng khi trả lời dạng luồng`;
       else if (down && down.until > Date.now()) note = `${title} ${down.note}; máy chủ sẽ thử lại sau ${Math.ceil((down.until - Date.now()) / 60_000)} phút`;
       else {
-        const r = await callGroq(clean, env, NVIDIA_WAIT);
-        if (r.body) { nvidiaDown.delete(GROQ_ID); used = GROQ_ID; stream = r.body; }
-        else { nvidiaDown.set(GROQ_ID, { until: Date.now() + r.cool, note: r.note }); note = `${title} ${r.note}`; }
+        const r = await callExternal(id, clean, env, ext.wait || NVIDIA_WAIT);
+        if (r.body) { nvidiaDown.delete(id); lastOutcome.set(id, { ok: true, at: Date.now() }); used = id; stream = r.body; if (r.fallback) note = "bản dự phòng cùng hãng, vì bản chính đang quá tải"; else if (r.key > 1) note = `key ${r.key}, vì key 1 hết lượt hoặc đang lỗi`; }
+        else { nvidiaDown.set(id, { until: Date.now() + r.cool, note: r.note }); lastOutcome.set(id, { ok: false, note: r.note, at: Date.now() }); note = `${title} ${r.note}`; }
       }
     }
-    let nv = !used && NVIDIA_MODELS[body.model] ? body.model : null;
+    let nv = !used && NVIDIA_MODELS[body.model] ? body.model : !used && ext && images && !ext.vision ? "glm-5.3-flash" : null;
     if (nv && images && !NVIDIA_MODELS[nv].vision) nv = "glm-5.3-flash";
     if (nv) {
       const title = NVIDIA_MODELS[nv].title, down = nvidiaDown.get(nv);
@@ -181,21 +236,7 @@ export default {
     // Bản miễn phí hay bị quá tải (429) hoặc treo (502/503/504/524): thử lần lượt các mô hình miễn phí còn lại.
     // Z.ai từ chối ngẫu nhiên khoảng một nửa số lần khi đông (429, lỗi 1305) và trả lời lỗi rất nhanh, nên mô hình đầu tiên
     // được thử lại 2 lần (sau 1 rồi 2 giây) trước khi đổi sang mô hình khác. Lỗi treo (502/504/524) thì đổi mô hình ngay.
-    const order = used ? [] : images ? [model] : [model, ...FREE_MODELS.filter((x) => x !== model)];
-    for (const m of order) {
-      for (let attempt = 0; attempt < (m === order[0] ? 3 : 1); attempt++) {
-        if (upstream) await upstream.body?.cancel();
-        if (attempt) await new Promise((ok) => setTimeout(ok, 1000 * attempt));
-        used = m;
-        upstream = await fetch(UPSTREAM, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.ZAI_API_KEY}` },
-          body: JSON.stringify({ ...clean, effort: undefined, model: m, max_tokens: Math.min(clean.max_tokens, MODEL_MAX_TOKENS[m] || 32768) }),
-        });
-        if (upstream.status !== 429 && upstream.status !== 503) break;
-      }
-      if (!BUSY.includes(upstream.status)) break;
-    }
+    if (!used) ({ res: upstream, used } = await callZai(clean, images, model, env));
     if (!stream && BUSY.includes(upstream.status)) return fail(429, "Máy chủ GLM miễn phí đang quá tải. Đợi một lúc rồi thử lại.");
     // Không trả nguyên lỗi xác thực của Z.ai về trình duyệt để khỏi lộ chi tiết về key.
     if (!stream && (upstream.status === 401 || upstream.status === 403)) return fail(502, "API key trên máy chủ chung bị sai hoặc đã bị thu hồi.");
@@ -211,7 +252,7 @@ export default {
 // Gọi một mô hình trên NVIDIA. Thành công: { body } là luồng trả lời; thất bại: { note, cool } (lý do, thời gian tạm bỏ qua).
 async function callNvidia(name, clean, env, wait) {
   const spec = NVIDIA_MODELS[name];
-  const { thinking, effort, ...rest } = clean;
+  const { thinking, effort, level, ...rest } = clean;
   const on = thinking.type !== "disabled";
   const think = spec.think === "effort" ? { reasoning_effort: on ? effort : "low" }
     : spec.think === "kwargs" ? { chat_template_kwargs: { enable_thinking: on, thinking: on } } : {};
@@ -274,33 +315,108 @@ async function callNvidia(name, clean, env, wait) {
   }
 }
 
-// Gọi Qwen 3.8 27B trên Groq (Titan Pro XS). Thành công: { body }; thất bại: { note, cool }.
-async function callGroq(clean, env, wait) {
-  const { thinking, effort, ...rest } = clean;
-  // Groq/Qwen: OpenAI-compatible. Ảnh data URL base64. Context ~131K trên Groq.
+// Các key của một nhà cung cấp riêng: key chính rồi key dự phòng _2, _3 (chỉ những biến đã được đặt).
+const keysOf = (spec, env) => [spec.key, `${spec.key}_2`, `${spec.key}_3`].filter((k) => env[k]);
+// Key tạm hết lượt / bị từ chối: tên biến -> { until, why }. Hết lượt theo ngày thì nghỉ tới lúc Google đặt lại hạn mức (nửa đêm giờ Thái Bình Dương).
+const keyDown = new Map();
+const nextPacificMidnight = () => { const d = new Date(); d.setUTCHours(8, 0, 0, 0); if (d <= new Date()) d.setUTCDate(d.getUTCDate() + 1); return d.getTime(); };
+
+// Gọi mô hình ở nhà cung cấp riêng (Groq, Google). Thành công: { body } là luồng trả lời; thất bại: { note, cool }.
+// Thứ tự thử: từng id mô hình (bản chính rồi bản dự phòng) × từng key còn lượt. Key hết lượt (429), sai (401/403) hay đang quá tải (503)
+// thì chuyển sang key kế tiếp; id không có (404) thì chuyển sang id kế tiếp. Chỉ chờ chữ đầu tiên tối đa `wait`.
+// outer: tín hiệu huỷ từ bên ngoài (người dùng đóng trang) để khỏi chờ vô ích.
+async function callExternal(id, clean, env, wait, outer) {
+  const spec = EXTERNAL_MODELS[id];
+  const { thinking, effort, level, ...rest } = clean;
+  const on = thinking?.type !== "disabled", max = effort === "max";
   const timer = new AbortController(), t = setTimeout(() => timer.abort(), wait);
+  outer?.addEventListener("abort", () => timer.abort(), { once: true });
   const timeout = new Promise((_, no) => timer.signal.addEventListener("abort", () => no(new Error("timeout"))));
   timeout.catch(() => {});
+  const tries = []; // nhật ký từng lần gọi, ghi vào lý do để dễ tìm lỗi
   let reader;
   try {
-    const send = (max_tokens) => Promise.race([fetch(GROQ_URL, {
-      method: "POST",
-      signal: timer.signal,
-      headers: { "Content-Type": "application/json", Accept: "text/event-stream", Authorization: `Bearer ${env.GROQ_API_KEY}` },
-      body: JSON.stringify({ ...rest, stream: true, model: GROQ_MODEL, max_tokens: Math.min(max_tokens, 16384) }),
-    }), timeout]);
-    let res = await send(rest.max_tokens);
+    const all = spec.models(env), good = workingModel.get(id);
+    const candidates = good && all.includes(good) ? [good, ...all.filter((m) => m !== good)] : all;
+    const keys = keysOf(spec, env);
+    if (!keys.length) { clearTimeout(t); return { note: `chưa được bật trên máy chủ (thiếu ${spec.key})`, cool: 0 }; }
+    const free = keys.filter((k) => !(keyDown.get(k)?.until > Date.now()));
+    const keyOrder = free.length ? free : keys; // mọi key đều đang nghỉ thì vẫn thử lại (có thể đã hồi)
+    const native = !!spec.native?.(env);
+    const ex = native ? spec.nativeExtra : spec.extra, rx = native ? spec.nativeRetry : spec.retry;
+    const { temperature, top_p, ...unsampled } = rest;
+    const base = spec.noSampling ? unsampled : rest;
+    let model = candidates[0], key = keyOrder[0];
+    // Mỗi lần gọi chỉ chờ PHẢN HỒI ĐẦU (mã trạng thái) tối đa HEADER_WAIT: bình thường nhà cung cấp trả 200 ngay cả khi model còn
+    // đang suy nghĩ, nên im lặng lâu nghĩa là kết nối bị kẹt; bỏ lần đó (coi như 504) để còn thời gian thử key, bản khác.
+    const send = async (max_tokens, extra) => {
+      const one = new AbortController(), stop = () => one.abort();
+      timer.signal.addEventListener("abort", stop, { once: true });
+      let hung = false;
+      const h = setTimeout(() => { hung = true; one.abort(); }, HEADER_WAIT);
+      try {
+        return await (native
+          ? fetch(`${GEMINI_NATIVE}/${encodeURIComponent(model)}:streamGenerateContent?alt=sse`, {
+            method: "POST",
+            signal: one.signal,
+            headers: { "Content-Type": "application/json", Accept: "text/event-stream", "x-goog-api-key": env[key] },
+            body: JSON.stringify(geminiBody(rest.messages, Math.min(max_tokens, spec.maxTokens), extra)),
+          })
+          : fetch(spec.url, {
+            method: "POST",
+            signal: one.signal,
+            headers: { "Content-Type": "application/json", Accept: "text/event-stream", Authorization: `Bearer ${env[key]}` },
+            body: JSON.stringify({ ...base, stream: true, model, max_tokens: Math.min(max_tokens, spec.maxTokens), ...extra }),
+          }));
+      } catch (e) {
+        if (hung && !timer.signal.aborted) return new Response("", { status: 504 });
+        throw e;
+      } finally {
+        clearTimeout(h);
+        timer.signal.removeEventListener("abort", stop);
+      }
+    };
+    let res, onlyMissing = true, lastBody = "";
+    const started = Date.now();
+    const label = () => (model === candidates[0] ? "bản chính" : "bản dự phòng") + (keys.length > 1 ? ` key ${keys.indexOf(key) + 1}` : "");
+    search: for (const m of candidates) {
+      model = m;
+      for (const k of keyOrder) {
+        key = k;
+        // Chỉ có một key: quá tải 503 thì chờ 1 giây thử lại một lần (nhiều key thì đổi key luôn, nhanh hơn).
+        for (let attempt = 0; ; attempt++) {
+          tries.push(`${label()}: đang chờ`);
+          res = await send(rest.max_tokens, ex(on, max, level));
+          tries[tries.length - 1] = `${label()}: ${res.status === 504 ? "không phản hồi" : res.status} sau ${Math.round((Date.now() - started) / 1000)} giây`;
+          if (res.status !== 503 || keyOrder.length > 1 || attempt >= 1) break;
+          await res.body?.cancel();
+          await Promise.race([new Promise((ok) => setTimeout(ok, 1000)), timeout]);
+        }
+        if (res.ok || ![401, 403, 404, 429, 503, 504].includes(res.status)) break search;
+        lastBody = await res.text().catch(() => "");
+        if (res.status === 404) break; // id không có: key khác cũng vậy, sang id kế tiếp
+        onlyMissing = false;
+        if (res.status === 429) keyDown.set(k, { until: /per ?day|daily|PerDay/i.test(lastBody) ? nextPacificMidnight() : Date.now() + 65_000, why: "hết lượt" });
+        if (res.status === 401 || res.status === 403) keyDown.set(k, { until: Date.now() + 3_600_000, why: "bị từ chối" });
+      }
+    }
     if (res.status === 400) {
       const text = await res.text().catch(() => "");
-      res = /max_tokens|context|too large|maximum/i.test(text) ? await send(8192) : new Response(text, { status: 400 });
+      res = /max_?tokens|maxOutputTokens|context|too large|maximum/i.test(text) ? await send(16384, ex(on, max, level))
+        : rx && /thinking|reasoning|extra_body|unknown|invalid/i.test(text) ? await send(rest.max_tokens, rx(on, max, level))
+        : new Response(text, { status: 400 });
     }
     if (!res.ok) {
-      const detail = (await res.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 160);
+      const detail = ((res.bodyUsed ? lastBody : await res.text().catch(() => "")) || lastBody).replace(/(gsk_|AIza)[\w-]+/g, "$1…").replace(/\s+/g, " ").slice(0, 160);
       clearTimeout(t);
-      if (res.status === 401 || res.status === 403) return { note: `bị từ chối (${res.status}): kiểm tra lại GROQ_API_KEY`, cool: 600_000 };
-      if (res.status === 429) return { note: "hết lượt free hoặc đang quá tải (429)", cool: 60_000 };
-      return { note: `báo lỗi ${res.status}: ${detail}`, cool: 300_000 };
+      const log = ` (${tries.join("; ")})`;
+      if (res.status === 401 || res.status === 403) return { note: `bị từ chối (${res.status}): kiểm tra lại ${keys.length > 1 ? "các key " + spec.key : spec.key}${log}`, cool: 600_000 };
+      if (res.status === 429) return { note: `hết lượt miễn phí trên ${keys.length > 1 ? `cả ${keys.length} key` : "key"} (429)${log}`, cool: 60_000 };
+      if (res.status === 503 || res.status === 504) return { note: `máy chủ gốc đang quá tải${log}`, cool: spec.cool503 ?? 30_000 };
+      if (res.status === 404) return { note: `không tìm thấy mô hình trên máy chủ gốc (404, đã thử ${candidates.join(", ")})`, cool: 3_600_000 };
+      return { note: `báo lỗi ${res.status}: ${detail}${log}`, cool: 300_000 };
     }
+    keyDown.delete(key);
     reader = res.body.getReader();
     const chunks = [], dec = new TextDecoder();
     let text = "";
@@ -310,49 +426,256 @@ async function callGroq(clean, env, wait) {
       chunks.push(value); text += dec.decode(value, { stream: true });
     }
     clearTimeout(t);
-    if (!/data:\s*\{/.test(text)) return { note: "không trả về nội dung", cool: 300_000 };
+    if (!/data:\s*\{/.test(text)) return { note: `không trả về nội dung (${tries.join("; ")})`, cool: spec.coolTimeout || 300_000 };
+    // Chỉ nhớ id dự phòng khi các id trước KHÔNG tồn tại (404); quá tải tạm thời thì lần sau vẫn thử id chính trước.
+    if (onlyMissing) workingModel.set(id, model);
+    const fallback = model !== candidates[0] && !onlyMissing;
     const body = new ReadableStream({
       start(c) { for (const ch of chunks) c.enqueue(ch); },
       async pull(c) {
         let stall;
-        const r = await Promise.race([reader.read(), new Promise((ok) => { stall = setTimeout(() => ok(null), STALL); })]);
+        const r = await Promise.race([reader.read(), new Promise((ok) => { stall = setTimeout(() => ok(null), spec.stall || STALL); })]);
         clearTimeout(stall);
-        if (!r) { reader.cancel().catch(() => {}); c.error(new Error("Groq ngừng gửi dữ liệu")); }
+        if (!r) { reader.cancel().catch(() => {}); c.error(new Error(`${spec.title} ngừng gửi dữ liệu`)); }
         else if (r.done) c.close();
         else c.enqueue(r.value);
       },
       cancel() { reader.cancel().catch(() => {}); },
     });
-    return { body };
+    return { body: native ? body.pipeThrough(geminiToOpenAI()) : spec.thoughtTags ? body.pipeThrough(thoughtSplitter()) : body, fallback, key: keys.indexOf(key) + 1, keys: keys.length };
   } catch {
     clearTimeout(t);
     reader?.cancel().catch(() => {});
+    const log = tries.length ? ` (${tries.join("; ")})` : "";
+    if (outer?.aborted) return { note: "người dùng đã đóng trang", cool: 0 };
     return timer.signal.aborted
-      ? { note: `không trả lời sau ${wait / 1000} giây (đang quá đông)`, cool: 300_000 }
-      : { note: "không kết nối được", cool: 120_000 };
+      ? { note: `chưa ra chữ đầu tiên sau ${Math.round(wait / 60_000) >= 2 ? Math.round(wait / 60_000) + " phút" : wait / 1000 + " giây"}${log}`, cool: spec.coolTimeout || 300_000 }
+      : { note: `không kết nối được${log}`, cool: 120_000 };
   }
 }
 
-// Kiểm tra nhanh từng mô hình mạnh (lưu kết quả 2 phút). Groq (Titan Pro XS) kiểm tra riêng; NVIDIA như cũ.
+// Mô hình suy nghĩ rất lâu (Atlas 6 Omega, tới 30 phút): trả lời trình duyệt NGAY với một luồng, 15 giây gửi một dòng giữ kết nối
+// (": keepalive <số giây>", trang bỏ qua nhưng biết máy chủ vẫn đang chờ), để kết nối không bị cắt vì im lặng quá lâu.
+// Mô hình lỗi thì chuyển sang GLM của Z.ai ngay trong luồng đó, báo cho trang bằng một dòng data: {"astra_meta": {...}}.
+function streamExternal(id, ext, clean, images, zaiModel, env, cors, ctx) {
+  const { readable, writable } = new TransformStream();
+  const w = writable.getWriter(), enc = new TextEncoder(), dec = new TextDecoder(), started = Date.now();
+  const gone = new AbortController();
+  const put = (s) => gone.signal.aborted ? Promise.resolve()
+    : w.write(typeof s === "string" ? enc.encode(s) : s).catch(() => gone.abort());
+  const meta = (o) => put(`data: ${JSON.stringify({ astra_meta: o })}\n\n`);
+  const ping = setInterval(() => put(`: keepalive ${Math.round((Date.now() - started) / 1000)}\n\n`), 15_000);
+  // Chép luồng nguồn sang, chỉ cắt ở cuối dòng để dòng giữ kết nối không chen vào giữa một dòng dữ liệu.
+  const pipe = async (src) => {
+    const rd = src.getReader();
+    let buf = "";
+    try {
+      while (true) {
+        const { value, done } = await rd.read();
+        if (done) break;
+        if (gone.signal.aborted) { rd.cancel().catch(() => {}); return; }
+        buf += dec.decode(value, { stream: true });
+        const cut = buf.lastIndexOf("\n") + 1;
+        if (cut) { await put(buf.slice(0, cut)); buf = buf.slice(cut); }
+      }
+      if (buf) await put(buf + "\n");
+    } finally { rd.releaseLock?.(); }
+  };
+  const run = (async () => {
+    try {
+      const r = await callExternal(id, clean, env, ext.wait || NVIDIA_WAIT, gone.signal);
+      if (gone.signal.aborted) return;
+      if (r.body) {
+        nvidiaDown.delete(id); lastOutcome.set(id, { ok: true, at: Date.now() });
+        if (r.fallback) await meta({ note: "bản dự phòng cùng hãng, vì bản chính đang quá tải" });
+        else if (r.key > 1) await meta({ note: `key ${r.key}, vì key 1 hết lượt hoặc đang lỗi` });
+        try { await pipe(r.body); }
+        catch (e) { await meta({ error: `${ext.title} bị ngắt giữa chừng: ${String(e?.message || e).slice(0, 120)}` }); }
+        return;
+      }
+      if (r.cool) nvidiaDown.set(id, { until: Date.now() + r.cool, note: r.note });
+      lastOutcome.set(id, { ok: false, note: r.note, at: Date.now() });
+      const z = await callZai(clean, images, zaiModel, env);
+      await meta({ model: z.used, note: `${ext.title} ${r.note}` });
+      if (z.res.ok && z.res.body) await pipe(z.res.body);
+      else { await z.res.body?.cancel(); await meta({ error: BUSY.includes(z.res.status) ? "Máy chủ dự phòng cũng đang quá tải. Đợi một lúc rồi thử lại." : `Máy chủ dự phòng báo lỗi ${z.res.status}.` }); }
+    } catch (e) {
+      await meta({ error: "Máy chủ gặp lỗi: " + String(e?.message || e).slice(0, 160) });
+    } finally {
+      clearInterval(ping);
+      if (!gone.signal.aborted) w.close().catch(() => {});
+    }
+  })();
+  ctx?.waitUntil?.(run);
+  const headers = new Headers(cors);
+  headers.set("Content-Type", "text/event-stream");
+  headers.set("Cache-Control", "no-store");
+  headers.set("X-GLM-Model", id);
+  headers.set("X-Astra-Stream", "1");
+  return new Response(readable, { status: 200, headers });
+}
+
+// GLM của Z.ai, dùng khi mô hình khác không trả lời được. Bản miễn phí hay bị quá tải (429) hoặc treo (502/503/504/524):
+// thử lần lượt các mô hình miễn phí; mô hình đầu tiên được thử lại 2 lần (sau 1 rồi 2 giây). Trả về { res, used }.
+async function callZai(clean, images, model, env) {
+  const order = images ? [model] : [model, ...FREE_MODELS.filter((x) => x !== model)];
+  let res, used;
+  for (const m of order) {
+    for (let attempt = 0; attempt < (m === order[0] ? 3 : 1); attempt++) {
+      if (res) await res.body?.cancel();
+      if (attempt) await new Promise((ok) => setTimeout(ok, 1000 * attempt));
+      used = m;
+      res = await fetch(UPSTREAM, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.ZAI_API_KEY}` },
+        body: JSON.stringify({ ...clean, effort: undefined, level: undefined, model: m, max_tokens: Math.min(clean.max_tokens, MODEL_MAX_TOKENS[m] || 32768) }),
+      });
+      if (res.status !== 429 && res.status !== 503) break;
+    }
+    if (!BUSY.includes(res.status)) break;
+  }
+  return { res, used };
+}
+
+// Đổi tin nhắn kiểu OpenAI sang yêu cầu streamGenerateContent của Google: system → systemInstruction, assistant → model,
+// ảnh data URL → inlineData; tin nhắn liền nhau cùng vai được gộp lại.
+function geminiBody(messages, maxOutputTokens, thinkingConfig) {
+  const system = [], contents = [];
+  for (const m of messages) {
+    const parts = typeof m.content === "string" ? (m.content ? [{ text: m.content }] : [])
+      : m.content.map((p) => {
+        if (p.type === "text") return p.text ? { text: p.text } : null;
+        const [head, data] = p.image_url.url.split(",");
+        return { inlineData: { mimeType: head.slice(5, head.indexOf(";")), data } };
+      }).filter(Boolean);
+    if (m.role === "system") { for (const p of parts) if (p.text) system.push(p.text); continue; }
+    if (!parts.length) continue;
+    const role = m.role === "assistant" ? "model" : "user";
+    if (contents.at(-1)?.role === role) contents.at(-1).parts.push(...parts);
+    else contents.push({ role, parts });
+  }
+  if (!contents.length || contents[0].role !== "user") contents.unshift({ role: "user", parts: [{ text: "(bắt đầu)" }] });
+  return {
+    contents,
+    ...(system.length ? { systemInstruction: { parts: [{ text: system.join("\n\n") }] } } : {}),
+    generationConfig: { maxOutputTokens, thinkingConfig },
+  };
+}
+
+// Đổi luồng SSE của streamGenerateContent sang định dạng chat/completions mà trang đang đọc:
+// phần có thought: true → delta.reasoning_content, còn lại → delta.content; MAX_TOKENS → finish_reason "length" (trang tự viết tiếp).
+function geminiToOpenAI() {
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  let pending = "";
+  const conv = (raw) => {
+    const line = raw.replace(/\r$/, "");
+    if (!line.startsWith("data:")) return "";
+    let j;
+    try { j = JSON.parse(line.slice(5)); } catch { return ""; }
+    if (j.error) return `data: ${JSON.stringify({ error: j.error })}\n\n`;
+    const c = j.candidates?.[0];
+    let content = "", reasoning = "";
+    for (const p of c?.content?.parts || []) if (typeof p.text === "string") { if (p.thought) reasoning += p.text; else content += p.text; }
+    const fr = c?.finishReason;
+    const finish = !fr || fr === "FINISH_REASON_UNSPECIFIED" ? null : fr === "MAX_TOKENS" ? "length" : "stop";
+    if (!content && !reasoning && !finish) return "";
+    const delta = {};
+    if (reasoning) delta.reasoning_content = reasoning;
+    if (content) delta.content = content;
+    return `data: ${JSON.stringify({ choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
+  };
+  return new TransformStream({
+    transform(chunk, c) {
+      pending += dec.decode(chunk, { stream: true });
+      const lines = pending.split("\n");
+      pending = lines.pop();
+      const out = lines.map(conv).join("");
+      if (out) c.enqueue(enc.encode(out));
+    },
+    flush(c) {
+      const out = (pending ? conv(pending) : "") + "data: [DONE]\n\n";
+      c.enqueue(enc.encode(out));
+    },
+  });
+}
+
+function thoughtSplitter() {
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  let inThought = false, carry = "", pending = "";
+  const fix = (line) => {
+    if (!line.startsWith("data:")) return line;
+    const data = line.slice(5).trim();
+    if (!data || data === "[DONE]") return line;
+    let j;
+    try { j = JSON.parse(data); } catch { return line; }
+    const d = j.choices?.[0]?.delta;
+    if (!d || typeof d.content !== "string") return line;
+    if (d.extra_content?.google?.thought === true) {
+      d.reasoning_content = (d.reasoning_content || "") + d.content; d.content = "";
+      return "data: " + JSON.stringify(j);
+    }
+    let text = carry + d.content, out = "", think = "";
+    carry = "";
+    while (text) {
+      const tag = inThought ? "</thought>" : "<thought>", at = text.indexOf(tag);
+      if (at >= 0) {
+        if (inThought) think += text.slice(0, at); else out += text.slice(0, at);
+        text = text.slice(at + tag.length); inThought = !inThought;
+        continue;
+      }
+      // Giữ lại đoạn cuối có thể là nửa đầu của thẻ, ghép với gói sau.
+      let keep = 0;
+      for (let k = Math.min(tag.length - 1, text.length); k > 0; k--) if (tag.startsWith(text.slice(-k))) { keep = k; break; }
+      const part = text.slice(0, text.length - keep);
+      if (inThought) think += part; else out += part;
+      carry = text.slice(text.length - keep); text = "";
+    }
+    d.content = out;
+    if (think) d.reasoning_content = (d.reasoning_content || "") + think;
+    return "data: " + JSON.stringify(j);
+  };
+  return new TransformStream({
+    transform(chunk, c) {
+      pending += dec.decode(chunk, { stream: true });
+      const lines = pending.split("\n");
+      pending = lines.pop();
+      if (lines.length) c.enqueue(enc.encode(lines.map(fix).join("\n") + "\n"));
+    },
+    flush(c) {
+      if (pending) c.enqueue(enc.encode(fix(pending) + "\n"));
+      if (carry) c.enqueue(enc.encode("data: " + JSON.stringify({ choices: [{ index: 0, delta: { content: carry } }] }) + "\n\n"));
+    },
+  });
+}
+
+// Kiểm tra nhanh từng mô hình mạnh (lưu kết quả 2 phút). Mô hình ở nhà cung cấp riêng (Groq, Google) kiểm tra riêng; NVIDIA như cũ.
 // Mô hình đang bị tạm bỏ qua thì báo luôn, không gọi lại. all = kiểm tra cả các mô hình thử (trial).
 async function nvidiaStatus(env, all) {
   const cache = statusCache?.[all ? "all" : "menu"];
   if (cache && Date.now() - cache.at < 120_000) return cache.data;
   const probe = { messages: [{ role: "user", content: "Hi" }], stream: true, temperature: 0.6, top_p: 0.95, max_tokens: 16, thinking: { type: "enabled" }, effort: "high" };
   const models = {};
-  // Titan Pro XS = Qwen 3.8 27B trên Groq
-  if (env.GROQ_API_KEY) {
-    const down = nvidiaDown.get(GROQ_ID);
-    if (down && down.until > Date.now()) models[GROQ_ID] = { ok: false, note: down.note };
-    else {
-      const start = Date.now();
-      const r = await callGroq(probe, env, 20_000);
-      if (r.body) { r.body.cancel().catch(() => {}); nvidiaDown.delete(GROQ_ID); models[GROQ_ID] = { ok: true, ms: Date.now() - start }; }
-      else { nvidiaDown.set(GROQ_ID, { until: Date.now() + r.cool, note: r.note }); models[GROQ_ID] = { ok: false, note: r.note }; }
+  // Groq (Forge X) và Google (Gemini 4 Hydrogen): chạy song song với NVIDIA.
+  const external = Object.keys(EXTERNAL_MODELS).map(async (id) => {
+    const spec = EXTERNAL_MODELS[id];
+    const keys = keysOf(spec, env);
+    if (!keys.length) { models[id] = { ok: false, note: `chưa gắn ${spec.key}` }; return; }
+    const usable = keys.filter((k) => !(keyDown.get(k)?.until > Date.now())).length;
+    const down = nvidiaDown.get(id);
+    if (down && down.until > Date.now()) { models[id] = { ok: false, note: down.note }; return; }
+    if (spec.passiveStatus) {
+      // Theo kết quả câu hỏi thật gần nhất (trong 5 phút); chưa có thông tin thì coi như sẵn sàng.
+      const last = lastOutcome.get(id);
+      models[id] = last && !last.ok && Date.now() - last.at < 300_000 ? { ok: false, note: last.note }
+        : !usable ? { ok: false, note: `hết lượt miễn phí trên ${keys.length > 1 ? `cả ${keys.length} key` : "key"} (429)` }
+        : { ok: true, passive: true, ...(keys.length > 1 ? { note: `${usable}/${keys.length} key còn lượt` } : {}) };
+      return;
     }
-  } else {
-    models[GROQ_ID] = { ok: false, note: "thiếu GROQ_API_KEY" };
-  }
+    const start = Date.now();
+    const r = await callExternal(id, { ...probe, thinking: { type: "disabled" } }, env, spec.wait ? 45_000 : 20_000);
+    if (r.body) { r.body.cancel().catch(() => {}); nvidiaDown.delete(id); models[id] = { ok: true, ms: Date.now() - start }; }
+    else { nvidiaDown.set(id, { until: Date.now() + r.cool, note: r.note }); models[id] = { ok: false, note: r.note }; }
+  });
   // NVIDIA
   if (env.NVIDIA_API_KEY) {
     await Promise.all(Object.keys(NVIDIA_MODELS).filter((n) => all || !NVIDIA_MODELS[n].trial).map(async (name) => {
@@ -364,7 +687,8 @@ async function nvidiaStatus(env, all) {
       else { nvidiaDown.set(name, { until: Date.now() + r.cool, note: r.note, gone: r.gone }); models[name] = { ok: false, note: r.note, gone: r.gone }; }
     }));
   }
-  const enabled = !!(env.GROQ_API_KEY || env.NVIDIA_API_KEY);
+  await Promise.all(external);
+  const enabled = !!(env.NVIDIA_API_KEY || Object.values(EXTERNAL_MODELS).some((s) => keysOf(s, env).length));
   statusCache = { ...statusCache, [all ? "all" : "menu"]: { at: Date.now(), data: { enabled, models } } };
   return statusCache[all ? "all" : "menu"].data;
 }
